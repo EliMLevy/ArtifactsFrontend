@@ -41,3 +41,16 @@ export function prettyCode(code) {
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+/** Rough human duration for ETA tooltips: "~45 min", "~2h 15m", "~1d 3h". */
+export function fmtDuration(totalSeconds) {
+  const mins = Math.round(Math.max(0, totalSeconds) / 60);
+  if (mins < 1) return "<1 min";
+  if (mins < 60) return `~${mins} min`;
+  const h = Math.floor(mins / 60);
+  const rm = mins % 60;
+  if (h < 24) return rm ? `~${h}h ${rm}m` : `~${h}h`;
+  const d = Math.floor(h / 24);
+  const rh = h % 24;
+  return rh ? `~${d}d ${rh}h` : `~${d}d`;
+}

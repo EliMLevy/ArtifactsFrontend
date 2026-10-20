@@ -4,7 +4,7 @@ import { state } from "../store.js";
 import { getMap, contentOf } from "../maps.js";
 import { itemByCode } from "../items.js";
 import { itemTileHTML } from "./itemTile.js";
-import { esc, num, pct, fmtClock, fmtTime, prettyCode } from "../utils.js";
+import { esc, num, pct, fmtClock, fmtTime, fmtDuration, prettyCode } from "../utils.js";
 
 const SKILLS = [
   ["mining", "Mining"],
@@ -44,13 +44,18 @@ export function cooldownRemaining(c) {
   return Math.max(0, c.cooldown || 0);
 }
 
-function skillsHTML(c) {
+function skillsHTML(c, skillEtas = {}) {
   const items = SKILLS.map(([key, label]) => {
     const lv = c[`${key}_level`];
     const xp = c[`${key}_xp`];
     const mx = c[`${key}_max_xp`];
+    const eta = skillEtas[key];
+    const title =
+      eta !== undefined
+        ? ` title="${esc(eta == null ? "Not enough info" : `Next level in ${fmtDuration(eta)}`)}"`
+        : "";
     return (
-      `<div class="skill"><div class="skill-top"><span class="nm">${esc(label)}</span>` +
+      `<div class="skill"${title}><div class="skill-top"><span class="nm">${esc(label)}</span>` +
       `<span class="lv">Lv ${num(lv)}</span></div>` +
       `<div class="bar"><i style="width:${pct(xp, mx).toFixed(1)}%"></i></div>` +
       `<div class="xpv">${num(xp)} / ${num(mx)} XP</div></div>`
@@ -143,6 +148,99 @@ export function logXp(l) {
   return findGain(content, "xp_gained");
 }
 
+/* ---------- ETA estimates (seconds, or null when the logs can't say) ---------- */
+
+function logContent(l) {
+  let content = l && l.content;
+  if (typeof content === "string") {
+    try {
+      return JSON.parse(content);
+    } catch {
+      return null;
+    }
+  }
+  return content && typeof content === "object" ? content : null;
+}
+
+/** Seconds between the character's oldest and newest log; 0 when unknowable. */
+function logWindowSeconds(logs) {
+  let min = Infinity;
+  let max = -Infinity;
+  for (const l of logs) {
+    const t = Date.parse(l && l.created_at);
+    if (isNaN(t)) continue;
+    if (t < min) min = t;
+    if (t > max) max = t;
+  }
+  return max > min ? (max - min) / 1000 : 0;
+}
+
+function taskEtaSeconds(c, logs, windowSec) {
+  if (!c.task || !c.task_total) return null;
+  const remaining = c.task_total - (c.task_progress || 0);
+  if (remaining <= 0) return 0;
+  if (windowSec <= 0) return null;
+  let fights = 0;
+  for (const l of logs) {
+    if (l.type !== "fight") continue;
+    const f = logContent(l)?.fight;
+    if (f && f.opponent === c.task) fights++;
+  }
+  if (!fights) return null;
+  return (windowSec / fights) * remaining;
+}
+
+function combatEtaSeconds(c, logs, windowSec) {
+  const remaining = (c.max_xp || 0) - (c.xp || 0);
+  if (remaining <= 0) return 0;
+  if (windowSec <= 0) return null;
+  let gained = 0;
+  for (const l of logs) if (l.type === "fight") gained += logXp(l);
+  if (gained <= 0) return null;
+  return (windowSec / gained) * remaining;
+}
+
+/** skill code -> total xp_gained reported across the logs (snapshot excluded). */
+function skillGains(logs) {
+  const gains = new Map();
+  const visit = (node, depth) => {
+    if (!node || typeof node !== "object" || depth > 4) return;
+    if (typeof node.skill === "string" && typeof node.xp_gained === "number") {
+      gains.set(node.skill, (gains.get(node.skill) || 0) + node.xp_gained);
+    }
+    for (const [k, v] of Object.entries(node)) {
+      if (k === "character") continue;
+      visit(v, depth + 1);
+    }
+  };
+  for (const l of logs) visit(logContent(l), 0);
+  return gains;
+}
+
+export const GATHER_SKILLS = ["mining", "woodcutting", "fishing"];
+
+/** { task, combat, skills: {mining, woodcutting, fishing} } — seconds or null. */
+export function etasFor(c, logs) {
+  const windowSec = logWindowSeconds(logs);
+  const gains = skillGains(logs);
+  const skills = {};
+  for (const key of GATHER_SKILLS) {
+    const remaining = (c[`${key}_max_xp`] || 0) - (c[`${key}_xp`] || 0);
+    const gained = gains.get(key) || 0;
+    skills[key] =
+      remaining <= 0
+        ? 0
+        : windowSec > 0 && gained > 0
+          ? (windowSec / gained) * remaining
+          : null;
+  }
+  return {
+    task: taskEtaSeconds(c, logs, windowSec),
+    combat: combatEtaSeconds(c, logs, windowSec),
+    skills,
+  };
+}
+
 function logsHTML(c) {
   if (!state.logsAvailable) return "";
   const logs = (state.logsByCharacter[c.name] || []).slice(0, LOGS_PER_CHARACTER);
@@ -181,8 +279,12 @@ export function cardHTML(c, idx) {
   const cdTotal = Math.max(c.cooldown || 0, remaining);
   const cdPct = cdTotal > 0 ? (remaining / cdTotal) * 100 : 0;
 
+  const etas = etasFor(c, state.logsByCharacter[c.name] || []);
+  const etaTitle = (eta, label) =>
+    eta == null ? "Not enough info" : `${label} ${fmtDuration(eta)}`;
+
   const taskHtml = c.task
-    ? `<div class="task-line">Task: <strong>${esc(prettyCode(c.task))}</strong>` +
+    ? `<div class="task-line" title="${esc(etaTitle(etas.task, "Estimated completion:"))}">Task: <strong>${esc(prettyCode(c.task))}</strong>` +
       (c.task_type ? ` <span class="tag">${esc(c.task_type)}</span>` : "") +
       (c.task_total
         ? ` · <span class="mono">${num(c.task_progress)} / ${num(c.task_total)}</span>`
@@ -209,7 +311,7 @@ export function cardHTML(c, idx) {
     `<div class="bar-row"><div class="bar-head"><span class="lbl">❤ Health</span>` +
     `<span class="val">${num(c.hp)} / ${num(c.max_hp)} HP</span></div>` +
     `<div class="bar ${hpClass}"><i style="width:${hpPct.toFixed(1)}%"></i></div></div>` +
-    `<div class="bar-row"><div class="bar-head"><span class="lbl">Combat XP</span>` +
+    `<div class="bar-row" title="${esc(etaTitle(etas.combat, "Next level in"))}"><div class="bar-head"><span class="lbl">Combat XP</span>` +
     `<span class="val">${num(c.xp)} / ${num(c.max_xp)}</span></div>` +
     `<div class="bar xp"><i style="width:${xpPct.toFixed(1)}%"></i></div></div>` +
     `</div>` +
@@ -219,7 +321,7 @@ export function cardHTML(c, idx) {
     `<div class="cd-sub" data-cd-sub></div>` +
     `</div>` +
     taskHtml +
-    skillsHTML(c) +
+    skillsHTML(c, etas.skills) +
     logsHTML(c) +
     gearHTML(c) +
     `</article>`
