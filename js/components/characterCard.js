@@ -101,31 +101,46 @@ function gearHTML(c) {
   );
 }
 
-/** Best-effort XP extraction from the log's schemaless content payload. */
-function logXp(node, depth = 0) {
-  if (typeof node === "string") {
+/** Recursive key lookup that skips the `character` snapshot subtree —
+ *  it carries totals (e.g. current XP), never gains. */
+function findGain(node, key, depth = 0) {
+  if (!node || typeof node !== "object" || depth > 4) return 0;
+  for (const [k, v] of Object.entries(node)) {
+    if (k === "character") continue;
+    if (k === key && typeof v === "number" && v > 0) return v;
+  }
+  for (const [k, v] of Object.entries(node)) {
+    if (k === "character") continue;
+    const r = findGain(v, key, depth + 1);
+    if (r) return r;
+  }
+  return 0;
+}
+
+/**
+ * XP actually gained by an action, from the log's content payload:
+ * - fights: content.fight.characters[].xp for this character
+ * - gathering / crafting / …: an xp_gained field in the action payload
+ */
+export function logXp(l) {
+  let content = l && l.content;
+  if (typeof content === "string") {
     try {
-      node = JSON.parse(node);
+      content = JSON.parse(content);
     } catch {
       return 0;
     }
   }
-  if (!node || typeof node !== "object" || depth > 2) return 0;
-  for (const [k, v] of Object.entries(node)) {
-    const key = k.toLowerCase();
-    if (
-      (key === "xp" || key === "xp_gained" || key === "experience") &&
-      typeof v === "number" &&
-      v > 0
-    ) {
-      return v;
-    }
+  if (!content || typeof content !== "object") return 0;
+
+  const fighters = content.fight && content.fight.characters;
+  if (Array.isArray(fighters) && fighters.length) {
+    const mine = fighters.filter((f) => f && f.character_name === l.character);
+    const list = mine.length ? mine : fighters;
+    const xp = list.reduce((a, f) => a + (typeof f.xp === "number" ? f.xp : 0), 0);
+    if (xp > 0) return xp;
   }
-  for (const v of Object.values(node)) {
-    const r = logXp(v, depth + 1);
-    if (r) return r;
-  }
-  return 0;
+  return findGain(content, "xp_gained");
 }
 
 function logsHTML(c) {
@@ -133,7 +148,7 @@ function logsHTML(c) {
   const logs = (state.logsByCharacter[c.name] || []).slice(0, LOGS_PER_CHARACTER);
   const rows = logs
     .map((l) => {
-      const xp = logXp(l.content);
+      const xp = logXp(l);
       return (
         `<div class="log-row"><span class="log-time mono">${esc(fmtTime(l.created_at))}</span>` +
         `<span class="tag">${esc(prettyCode(l.type))}</span>` +
