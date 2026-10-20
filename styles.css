@@ -290,6 +290,15 @@ details.gear summary { cursor: pointer; font-size: 13.5px; font-weight: 600; col
 .bank-panel { margin-bottom: 4px; }
 .bank-filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .bank-filters input[type="text"] { flex: 2 1 240px; }
+/* Search input with an inline clear (✕) button. */
+.bank-filters .search-wrap { flex: 2 1 240px; display: flex; position: relative; }
+.search-wrap input[type="text"] { flex: 1 1 auto; min-width: 0; padding-right: 34px; }
+.search-clear {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  border: none; background: transparent; color: var(--ink-2); cursor: pointer;
+  font-size: 13px; line-height: 1; padding: 5px 7px; border-radius: 6px;
+}
+.search-clear:hover { color: var(--ink); background: var(--surface-2); }
 /* Subtype filter tags (only subtypes present in the bank are shown). */
 .type-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .typetag {

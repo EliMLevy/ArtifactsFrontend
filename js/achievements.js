@@ -12,6 +12,8 @@ const els = {
   accountBtn: document.getElementById("accountBtn"),
   accountBanner: document.getElementById("accountBanner"),
   achSearch: document.getElementById("achSearch"),
+  achSearchClear: document.getElementById("achSearchClear"),
+  achTags: document.getElementById("achTags"),
   achContent: document.getElementById("achContent"),
 };
 
@@ -20,6 +22,8 @@ const ACH_MAX_PAGES = 20;
 
 let all = [];
 let query = "";
+let typeFilter = "";
+let completedOnly = false;
 
 function readAccount() {
   try {
@@ -98,16 +102,48 @@ function achCardHTML(a) {
   );
 }
 
+/** Quick-filter tags: one per objective type present, plus a Completed toggle. */
+function renderAchTags() {
+  const counts = new Map();
+  for (const a of all) {
+    const seen = new Set((a.objectives || []).map((o) => o.type).filter(Boolean));
+    for (const t of seen) counts.set(t, (counts.get(t) || 0) + 1);
+  }
+  const types = [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const doneCount = all.filter((a) => a.completed_at).length;
+  els.achTags.innerHTML =
+    types
+      .map(
+        ([t, n]) =>
+          `<button type="button" class="typetag" data-type="${esc(t)}" ` +
+          `aria-pressed="${typeFilter === t ? "true" : "false"}">` +
+          `${esc(prettyCode(t))} <span class="mono">${n}</span></button>`
+      )
+      .join("") +
+    `<button type="button" class="typetag" data-completed="1" ` +
+    `aria-pressed="${completedOnly ? "true" : "false"}">` +
+    `✓ Completed <span class="mono">${doneCount}</span></button>`;
+}
+
 function render() {
   const q = query.trim().toLowerCase();
-  const list = all.filter((a) => !q || (a.name || "").toLowerCase().includes(q));
+  const list = all.filter((a) => {
+    if (q && !(a.name || "").toLowerCase().includes(q)) return false;
+    if (typeFilter && !(a.objectives || []).some((o) => o.type === typeFilter)) return false;
+    if (completedOnly && !a.completed_at) return false;
+    return true;
+  });
   const doneCount = all.filter((a) => a.completed_at).length;
   els.achCount.textContent = all.length
     ? `· ${list.length} of ${all.length} shown · ${doneCount} completed`
     : "";
   els.achContent.innerHTML = list.length
     ? `<div class="grid">${list.map(achCardHTML).join("")}</div>`
-    : `<div class="log-empty">No achievements match “${esc(query.trim())}”.</div>`;
+    : `<div class="log-empty">${
+        q
+          ? `No achievements match “${esc(query.trim())}”.`
+          : "No achievements match the current filters."
+      }</div>`;
 }
 
 async function loadAchievements(account) {
@@ -132,6 +168,7 @@ async function loadAchievements(account) {
   const earned = all.reduce((s, a) => s + (a.completed_at ? a.points || 0 : 0), 0);
   const total = all.reduce((s, a) => s + (a.points || 0), 0);
   els.achPoints.textContent = all.length ? `${earned} / ${total} points` : "";
+  renderAchTags();
   render();
 }
 
@@ -154,6 +191,26 @@ async function loadFor(account) {
 
 els.achSearch.addEventListener("input", () => {
   query = els.achSearch.value;
+  els.achSearchClear.classList.toggle("hidden", !query);
+  render();
+});
+els.achSearchClear.addEventListener("click", () => {
+  els.achSearch.value = "";
+  query = "";
+  els.achSearchClear.classList.add("hidden");
+  render();
+  els.achSearch.focus();
+});
+els.achTags.addEventListener("click", (e) => {
+  const tag = e.target.closest(".typetag");
+  if (!tag) return;
+  if (tag.dataset.completed) {
+    completedOnly = !completedOnly;
+  } else {
+    const t = tag.dataset.type;
+    typeFilter = typeFilter === t ? "" : t;
+  }
+  renderAchTags();
   render();
 });
 

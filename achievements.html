@@ -45,9 +45,13 @@
 
       <div class="panel ach-panel">
         <div class="bank-filters">
-          <input type="text" id="achSearch" autocomplete="off" spellcheck="false"
-                 placeholder="Search achievements by name…" aria-label="Search achievements by name" />
+          <div class="search-wrap">
+            <input type="text" id="achSearch" autocomplete="off" spellcheck="false"
+                   placeholder="Search achievements by name…" aria-label="Search achievements by name" />
+            <button type="button" class="search-clear hidden" id="achSearchClear" aria-label="Clear search">✕</button>
+          </div>
         </div>
+        <div class="type-tags" id="achTags" role="group" aria-label="Filter achievements"></div>
         <div id="achContent">
           <div class="log-empty">Loading achievements…</div>
         </div>

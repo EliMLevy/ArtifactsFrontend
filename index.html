@@ -76,8 +76,11 @@
       </div>
       <div class="panel bank-panel hidden" id="bankPanel">
         <div class="bank-filters">
-          <input type="text" id="bankSearch" autocomplete="off" spellcheck="false"
-                 placeholder="Search items by name or code…" aria-label="Search bank items" />
+          <div class="search-wrap">
+            <input type="text" id="bankSearch" autocomplete="off" spellcheck="false"
+                   placeholder="Search items by name or code…" aria-label="Search bank items" />
+            <button type="button" class="search-clear hidden" id="bankSearchClear" aria-label="Clear search">✕</button>
+          </div>
         </div>
         <div class="type-tags" id="typeTags" role="group" aria-label="Filter by item type"></div>
         <div class="bank-grid" id="bankGrid"></div>

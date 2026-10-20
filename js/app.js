@@ -44,6 +44,7 @@ const els = {
   bankSection: document.getElementById("bankSection"),
   bankPanel: document.getElementById("bankPanel"),
   bankSearch: document.getElementById("bankSearch"),
+  bankSearchClear: document.getElementById("bankSearchClear"),
   typeTags: document.getElementById("typeTags"),
   bankGrid: document.getElementById("bankGrid"),
   bankCount: document.getElementById("bankCount"),
@@ -422,7 +423,15 @@ els.connect.addEventListener("click", connectAndLoad);
 els.refresh.addEventListener("click", () => refreshData({ logs: true, slow: true }));
 els.bankSearch.addEventListener("input", () => {
   state.bankFilter.q = els.bankSearch.value;
+  els.bankSearchClear.classList.toggle("hidden", !els.bankSearch.value);
   renderBankGrid();
+});
+els.bankSearchClear.addEventListener("click", () => {
+  els.bankSearch.value = "";
+  state.bankFilter.q = "";
+  els.bankSearchClear.classList.add("hidden");
+  renderBankGrid();
+  els.bankSearch.focus();
 });
 els.typeTags.addEventListener("click", (e) => {
   const tag = e.target.closest(".typetag");
@@ -494,6 +503,7 @@ els.clear.addEventListener("click", () => {
   els.token.value = "";
   els.account.value = "";
   els.bankSearch.value = "";
+  els.bankSearchClear.classList.add("hidden");
   els.chip.className = "account-chip";
   els.chip.innerHTML = "";
   els.charCount.textContent = "";
