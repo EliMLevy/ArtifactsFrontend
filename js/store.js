@@ -16,7 +16,7 @@ export const state = {
   via: "",
   /** SimpleItemSchema[] — full bank contents (token required) */
   bankItems: [],
-  bankFilter: { q: "", subtype: "" },
+  bankFilter: { q: "", type: "" },
   /** RateLimitsDataSchema | null */
   rates: null,
   /** true while auto-refresh is paused after a 429 */
@@ -73,7 +73,7 @@ export function resetConnectionState() {
   state.connected = false;
   state.via = "";
   state.bankItems = [];
-  state.bankFilter = { q: "", subtype: "" };
+  state.bankFilter = { q: "", type: "" };
   state.rates = null;
   state.backingOff = false;
 }

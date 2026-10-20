@@ -14,7 +14,7 @@ import {
 import { cardHTML, cooldownRemaining } from "./components/characterCard.js";
 import { itemDialogHTML } from "./components/bankSection.js";
 import { itemTileHTML } from "./components/itemTile.js";
-import { loadItemCatalog, itemByCode, subtypeLabel } from "./items.js";
+import { loadItemCatalog, itemByCode } from "./items.js";
 import { loadMapCatalog } from "./maps.js";
 import { esc, num, fmtClock, fmtTime, prettyCode } from "./utils.js";
 
@@ -44,7 +44,7 @@ const els = {
   bankSection: document.getElementById("bankSection"),
   bankPanel: document.getElementById("bankPanel"),
   bankSearch: document.getElementById("bankSearch"),
-  subtypeTags: document.getElementById("subtypeTags"),
+  typeTags: document.getElementById("typeTags"),
   bankGrid: document.getElementById("bankGrid"),
   bankCount: document.getElementById("bankCount"),
   itemDialog: document.getElementById("itemDialog"),
@@ -122,35 +122,35 @@ function renderRates() {
 
 /* ---------- bank section ---------- */
 
-/** Subtypes actually present in the bank, with counts — drives the tag row. */
-function bankSubtypes() {
+/** Item types actually present in the bank, with counts — drives the tag row. */
+function bankTypes() {
   const counts = new Map();
   for (const entry of state.bankItems) {
-    const st = itemByCode.get(entry.code)?.subtype || "";
-    if (!st) continue;
-    counts.set(st, (counts.get(st) || 0) + 1);
+    const ty = itemByCode.get(entry.code)?.type || "";
+    if (!ty) continue;
+    counts.set(ty, (counts.get(ty) || 0) + 1);
   }
   return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 }
 
-function renderSubtypeTags() {
-  const subs = bankSubtypes();
-  els.subtypeTags.innerHTML = subs
+function renderTypeTags() {
+  const types = bankTypes();
+  els.typeTags.innerHTML = types
     .map(
-      ([st, n]) =>
-        `<button type="button" class="subtag" data-subtype="${esc(st)}" ` +
-        `aria-pressed="${state.bankFilter.subtype === st ? "true" : "false"}">` +
-        `${esc(subtypeLabel(st))} <span class="mono">${n}</span></button>`
+      ([ty, n]) =>
+        `<button type="button" class="typetag" data-type="${esc(ty)}" ` +
+        `aria-pressed="${state.bankFilter.type === ty ? "true" : "false"}">` +
+        `${esc(prettyCode(ty))} <span class="mono">${n}</span></button>`
     )
     .join("");
 }
 
 function filteredBankItems() {
   const q = state.bankFilter.q.trim().toLowerCase();
-  const st = state.bankFilter.subtype;
+  const ty = state.bankFilter.type;
   return state.bankItems.filter((entry) => {
     const info = itemByCode.get(entry.code);
-    if (st && (info?.subtype || "") !== st) return false;
+    if (ty && (info?.type || "") !== ty) return false;
     if (q) {
       const name = ((info && info.name) || entry.code).toLowerCase();
       if (!name.includes(q) && !entry.code.toLowerCase().includes(q)) return false;
@@ -170,7 +170,7 @@ function renderBankGrid() {
 function showBankSection() {
   els.bankSection.classList.remove("hidden");
   els.bankPanel.classList.remove("hidden");
-  renderSubtypeTags();
+  renderTypeTags();
   renderBankGrid();
 }
 
@@ -182,16 +182,17 @@ function hideBankSection() {
 }
 
 /* ---------- character rendering ---------- */
-function openGearNames() {
-  const open = new Set();
+/** Names of characters whose gear section the user has manually collapsed. */
+function closedGearNames() {
+  const closed = new Set();
   els.content.querySelectorAll(".card").forEach((card) => {
     const d = card.querySelector("details.gear");
-    if (d && d.open) {
+    if (d && !d.open) {
       const c = state.characters[Number(card.getAttribute("data-idx"))];
-      if (c) open.add(c.name);
+      if (c) closed.add(c.name);
     }
   });
-  return open;
+  return closed;
 }
 
 function renderCharacters() {
@@ -204,16 +205,16 @@ function renderCharacters() {
       `<a href="https://docs.artifactsmmo.com" target="_blank" rel="noopener">Artifacts docs</a> — then refresh.</p></div>`;
     return;
   }
-  const gearOpen = openGearNames();
+  const gearClosed = closedGearNames();
   els.charCount.textContent = `· ${state.characters.length} ${state.characters.length === 1 ? "character" : "characters"}`;
   els.content.innerHTML =
     '<div class="grid">' + state.characters.map((c, i) => cardHTML(c, i)).join("") + "</div>";
-  // Restore any gear sections the user had expanded before the re-render.
+  // Gear sections are open by default; re-collapse any the user closed.
   els.content.querySelectorAll(".card").forEach((card) => {
     const c = state.characters[Number(card.getAttribute("data-idx"))];
-    if (c && gearOpen.has(c.name)) {
+    if (c && gearClosed.has(c.name)) {
       const d = card.querySelector("details.gear");
-      if (d) d.open = true;
+      if (d) d.open = false;
     }
   });
   tickCooldowns();
@@ -423,13 +424,13 @@ els.bankSearch.addEventListener("input", () => {
   state.bankFilter.q = els.bankSearch.value;
   renderBankGrid();
 });
-els.subtypeTags.addEventListener("click", (e) => {
-  const tag = e.target.closest(".subtag");
+els.typeTags.addEventListener("click", (e) => {
+  const tag = e.target.closest(".typetag");
   if (!tag) return;
-  const st = tag.dataset.subtype;
+  const ty = tag.dataset.type;
   // Single-select toggle: clicking the active tag clears the filter.
-  state.bankFilter.subtype = state.bankFilter.subtype === st ? "" : st;
-  renderSubtypeTags();
+  state.bankFilter.type = state.bankFilter.type === ty ? "" : ty;
+  renderTypeTags();
   renderBankGrid();
 });
 
@@ -452,14 +453,14 @@ els.bankGrid.addEventListener("keydown", (e) => {
     openItemDialog(tile.dataset.code);
   }
 });
-// Inventory tiles inside character cards open the same item dialog.
+// Inventory tiles + equipped gear inside character cards open the item dialog.
 els.content.addEventListener("click", (e) => {
-  const tile = e.target.closest(".inv-grid .item-tile");
+  const tile = e.target.closest(".inv-grid .item-tile, .gear-list .gear-item");
   if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
 });
 els.content.addEventListener("keydown", (e) => {
   if (e.key !== "Enter" && e.key !== " ") return;
-  const tile = e.target.closest(".inv-grid .item-tile");
+  const tile = e.target.closest(".inv-grid .item-tile, .gear-list .gear-item");
   if (tile && tile.dataset.code) {
     e.preventDefault();
     openItemDialog(tile.dataset.code);

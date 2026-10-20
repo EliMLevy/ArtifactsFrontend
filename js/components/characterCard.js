@@ -2,6 +2,7 @@
 import { LOGS_PER_CHARACTER } from "../config.js";
 import { state } from "../store.js";
 import { getMap, contentOf } from "../maps.js";
+import { itemByCode } from "../items.js";
 import { itemTileHTML } from "./itemTile.js";
 import { esc, num, pct, fmtClock, fmtTime, prettyCode } from "../utils.js";
 
@@ -68,10 +69,11 @@ function gearHTML(c) {
           : slot === "utility2_slot"
             ? c.utility2_slot_quantity
             : null;
-      const name = prettyCode(code);
+      const name = (itemByCode.get(code)?.name) || prettyCode(code);
       const title = qty ? `${label} — ${name} ×${num(qty)}` : `${label} — ${name}`;
       return (
-        `<span class="gear-item" title="${esc(title)}">` +
+        `<span class="gear-item" data-code="${esc(code)}" title="${esc(title)}" ` +
+        `role="button" tabindex="0" aria-label="${esc(title)} — view details">` +
         `<img src="https://artifactsmmo.com/images/items/${encodeURIComponent(code)}.png" ` +
         `alt="${esc(name)}" loading="lazy" onerror="this.remove()"></span>`
       );
@@ -86,7 +88,7 @@ function gearHTML(c) {
   const invCount = invEntries.reduce((a, s) => a + (s.quantity || 0), 0);
   if (!items && !invTiles) return "";
   return (
-    `<details class="gear"><summary>Equipment &amp; inventory</summary>` +
+    `<details class="gear" open><summary>Equipment &amp; inventory</summary>` +
     (items
       ? `<div class="gear-list">${items}</div>`
       : `<div class="inv-line">No equipment equipped.</div>`) +
@@ -99,16 +101,48 @@ function gearHTML(c) {
   );
 }
 
+/** Best-effort XP extraction from the log's schemaless content payload. */
+function logXp(node, depth = 0) {
+  if (typeof node === "string") {
+    try {
+      node = JSON.parse(node);
+    } catch {
+      return 0;
+    }
+  }
+  if (!node || typeof node !== "object" || depth > 2) return 0;
+  for (const [k, v] of Object.entries(node)) {
+    const key = k.toLowerCase();
+    if (
+      (key === "xp" || key === "xp_gained" || key === "experience") &&
+      typeof v === "number" &&
+      v > 0
+    ) {
+      return v;
+    }
+  }
+  for (const v of Object.values(node)) {
+    const r = logXp(v, depth + 1);
+    if (r) return r;
+  }
+  return 0;
+}
+
 function logsHTML(c) {
   if (!state.logsAvailable) return "";
   const logs = (state.logsByCharacter[c.name] || []).slice(0, LOGS_PER_CHARACTER);
   const rows = logs
-    .map(
-      (l) =>
+    .map((l) => {
+      const xp = logXp(l.content);
+      return (
         `<div class="log-row"><span class="log-time mono">${esc(fmtTime(l.created_at))}</span>` +
         `<span class="tag">${esc(prettyCode(l.type))}</span>` +
-        `<span class="log-desc">${esc(l.description || "")}</span></div>`
-    )
+        `<span class="log-desc">${esc(l.description || "")}</span>` +
+        (xp ? `<span class="log-xp">+${num(xp)} XP</span>` : "") +
+        (l.cooldown > 0 ? `<span class="log-cd mono">⏱ ${esc(fmtClock(l.cooldown))}</span>` : "") +
+        `</div>`
+      );
+    })
     .join("");
   return (
     `<div class="log-sec"><h3>Recent activity</h3>` +
