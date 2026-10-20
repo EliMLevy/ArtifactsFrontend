@@ -241,6 +241,25 @@ export function etasFor(c, logs) {
   };
 }
 
+/**
+ * Average "action lag": for each logged action, the gap to the next action
+ * minus that action's cooldown — i.e. idle time beyond the cooldown.
+ * Null when there aren't at least two usable log entries.
+ */
+export function avgLagSeconds(logs) {
+  const rows = (logs || [])
+    .map((l) => ({ t: Date.parse(l && l.created_at), cd: (l && l.cooldown) || 0 }))
+    .filter((r) => !isNaN(r.t))
+    .sort((a, b) => a.t - b.t);
+  if (rows.length < 2) return null;
+  let total = 0;
+  for (let i = 0; i < rows.length - 1; i++) {
+    const gap = (rows[i + 1].t - rows[i].t) / 1000;
+    total += Math.max(0, gap - rows[i].cd);
+  }
+  return total / (rows.length - 1);
+}
+
 function logsHTML(c) {
   if (!state.logsAvailable) return "";
   const logs = (state.logsByCharacter[c.name] || []).slice(0, LOGS_PER_CHARACTER);
@@ -282,6 +301,8 @@ export function cardHTML(c, idx) {
   const etas = etasFor(c, state.logsByCharacter[c.name] || []);
   const etaTitle = (eta, label) =>
     eta == null ? "Not enough info" : `${label} ${fmtDuration(eta)}`;
+  const lag = avgLagSeconds(state.logsByCharacter[c.name] || []);
+  const lagTxt = lag == null ? "—" : lag < 60 ? `${Math.round(lag)}s` : fmtClock(lag);
 
   const taskHtml = c.task
     ? `<div class="task-line" title="${esc(etaTitle(etas.task, "Estimated completion:"))}">Task: <strong>${esc(prettyCode(c.task))}</strong>` +
@@ -297,7 +318,8 @@ export function cardHTML(c, idx) {
     `<div class="card-top">` +
     `<div class="avatar" aria-hidden="true">${initials}${skinImg}</div>` +
     `<div class="card-id"><div class="card-name">${esc(c.name)}</div>` +
-    `<div class="card-meta"><span class="mono">${num(c.gold)}</span> gold</div></div>` +
+    `<div class="card-meta"><span class="mono">${num(c.gold)}</span> gold · ` +
+    `<span class="lag" title="Average idle time between an action's cooldown ending and the next action">avg lag <span class="mono">${esc(lagTxt)}</span></span></div></div>` +
     `<div class="lvl"><div class="n">${num(c.level)}</div><div class="t">Level</div></div>` +
     `</div>` +
     `<div class="loc"><span aria-hidden="true">📍</span><span class="place">${esc(place)}</span>` +
