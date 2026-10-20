@@ -1,5 +1,5 @@
 // Data orchestration: account resolution, roster + log fetching, refresh loop.
-import { REFRESH_MS, LOGS_PAGE_SIZE, BANK_PAGE_SIZE, BANK_MAX_PAGES } from "./config.js";
+import { REFRESH_MS, LOGS_PAGE_SIZE, LOGS_MAX_PAGES, BANK_PAGE_SIZE, BANK_MAX_PAGES } from "./config.js";
 import { state, setLogs } from "./store.js";
 import {
   getAccountDetails,
@@ -53,12 +53,18 @@ export async function fetchCharacters(account, token) {
   }
 }
 
-/** Fetch /my/logs (token required) and group them per character in state. */
+/** Page through /my/logs (token required) and group them per character in state. */
 export async function refreshLogs() {
   if (!state.token) return;
-  const body = await getLogs(state.token, 1, LOGS_PAGE_SIZE);
-  const logs = (body && body.data) || [];
-  setLogs(logs);
+  const all = [];
+  for (let page = 1; page <= LOGS_MAX_PAGES; page++) {
+    const body = await getLogs(state.token, page, LOGS_PAGE_SIZE);
+    const logs = (body && body.data) || [];
+    all.push(...logs);
+    const pages = body && body.pages;
+    if (logs.length < LOGS_PAGE_SIZE || (pages && page >= pages)) break;
+  }
+  setLogs(all);
 }
 
 /** Fetch /my/rates (token required) and stash the scopes in state. Silent on failure. */

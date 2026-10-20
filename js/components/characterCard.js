@@ -1,5 +1,4 @@
 // Character card renderer (pure: HTML string from a character object).
-import { LOGS_PER_CHARACTER } from "../config.js";
 import { state } from "../store.js";
 import { getMap, contentOf } from "../maps.js";
 import { itemByCode } from "../items.js";
@@ -262,7 +261,7 @@ export function avgLagSeconds(logs) {
 
 function logsHTML(c) {
   if (!state.logsAvailable) return "";
-  const logs = (state.logsByCharacter[c.name] || []).slice(0, LOGS_PER_CHARACTER);
+  const logs = state.logsByCharacter[c.name] || [];
   const rows = logs
     .map((l) => {
       const xp = logXp(l);

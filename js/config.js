@@ -10,7 +10,7 @@ export const REFRESH_MS = 5000;
 // /my/logs is heavier, so it refreshes every Nth character tick.
 export const LOGS_EVERY_N_TICKS = 3;
 export const LOGS_PAGE_SIZE = 100;
-export const LOGS_PER_CHARACTER = 8;
+export const LOGS_MAX_PAGES = 5;
 
 // Bank + rate limits refresh on a slower cadence.
 export const SLOW_EVERY_N_TICKS = 6;
