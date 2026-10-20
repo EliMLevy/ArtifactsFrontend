@@ -7,7 +7,6 @@ import { esc, num, pct, prettyCode } from "./utils.js";
 const els = {
   achCount: document.getElementById("achCount"),
   achPoints: document.getElementById("achPoints"),
-  accountPanel: document.getElementById("accountPanel"),
   accountInput: document.getElementById("accountInput"),
   accountBtn: document.getElementById("accountBtn"),
   accountBanner: document.getElementById("accountBanner"),
@@ -181,9 +180,7 @@ async function loadFor(account) {
   showBanner("");
   try {
     await loadAchievements(account);
-    els.accountPanel.classList.add("hidden");
   } catch (err) {
-    els.accountPanel.classList.remove("hidden");
     els.achContent.innerHTML = `<div class="log-empty">Could not load achievements for “${esc(account)}”.</div>`;
     showBanner(err && err.message ? err.message : "Failed to load achievements.");
   }
@@ -228,12 +225,14 @@ els.accountInput.addEventListener("keydown", (e) => {
 });
 
 /* ---------- init ---------- */
-const saved = readAccount();
-if (saved) {
-  els.accountInput.value = saved;
-  loadFor(saved);
+// A ?account= link (e.g. from the leaderboard) wins for display but does not
+// overwrite the saved account; submitting the field above saves explicitly.
+const paramAccount = new URLSearchParams(location.search).get("account");
+const initial = (paramAccount || readAccount() || "").trim();
+if (initial) {
+  els.accountInput.value = initial;
+  loadFor(initial);
 } else {
-  els.accountPanel.classList.remove("hidden");
   els.achContent.innerHTML =
     `<div class="log-empty">Enter an account username above to view its achievements.</div>`;
 }

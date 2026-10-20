@@ -74,3 +74,10 @@ export const getBankItemsPage = (token, page = 1, size = 100) =>
  */
 export const getAccountAchievementsPage = (account, page = 1, size = 100) =>
   apiFetch(`/accounts/${encodeURIComponent(account)}/achievements?page=${page}&size=${size}`);
+
+/**
+ * GET /leaderboard/accounts — public server leaderboard.
+ * sort: "achievements_points" | "gold". Returns the raw paged body.
+ */
+export const getAccountsLeaderboardPage = (sort, page = 1, size = 100) =>
+  apiFetch(`/leaderboard/accounts?sort=${encodeURIComponent(sort)}&page=${page}&size=${size}`);

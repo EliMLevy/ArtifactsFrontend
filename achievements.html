@@ -17,6 +17,7 @@
         <span class="nav-brand">⚔️ Artifacts</span>
         <a href="./index.html" class="nav-link">Dashboard</a>
         <a href="./achievements.html" class="nav-link active" aria-current="page">Achievements</a>
+        <a href="./leaderboard.html" class="nav-link">Leaderboard</a>
       </nav>
 
       <div class="section-head">
@@ -26,11 +27,11 @@
         <span class="count" id="achPoints"></span>
       </div>
 
-      <!-- Shown only when no account is saved from the dashboard -->
-      <section class="panel hidden" id="accountPanel" aria-labelledby="accountHeading">
-        <h2 id="accountHeading">Which account?</h2>
-        <p class="sub">Achievements are public — enter an account username to view its progress.
-          If you connect on the dashboard first, it will be remembered here automatically.</p>
+      <!-- Account selector: shows the account being viewed; editable -->
+      <section class="panel" aria-labelledby="accountHeading">
+        <h2 id="accountHeading">Account</h2>
+        <p class="sub">Achievements are public — this field shows the account currently being
+          viewed. Enter a different username and submit to switch.</p>
         <div class="form-grid">
           <label class="field">
             <span>Account username</span>

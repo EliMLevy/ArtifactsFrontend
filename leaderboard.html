@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Artifacts Leaderboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <nav class="site-nav" aria-label="Site">
+        <span class="nav-brand">⚔️ Artifacts</span>
+        <a href="./index.html" class="nav-link">Dashboard</a>
+        <a href="./achievements.html" class="nav-link">Achievements</a>
+        <a href="./leaderboard.html" class="nav-link active" aria-current="page">Leaderboard</a>
+      </nav>
+
+      <div class="section-head">
+        <h2>Accounts Leaderboard</h2>
+        <span class="count" id="lbCount"></span>
+        <span class="spacer"></span>
+      </div>
+
+      <div class="panel">
+        <div class="bank-filters">
+          <div class="search-wrap">
+            <input type="text" id="lbSearch" autocomplete="off" spellcheck="false"
+                   placeholder="Search accounts by name…" aria-label="Search accounts by name" />
+            <button type="button" class="search-clear hidden" id="lbSearchClear" aria-label="Clear search">✕</button>
+          </div>
+        </div>
+        <div class="type-tags" id="lbSortTags" role="group" aria-label="Sort leaderboard">
+          <button type="button" class="typetag" data-sort="achievements_points" aria-pressed="true">Achievement Points</button>
+          <button type="button" class="typetag" data-sort="gold" aria-pressed="false">Gold</button>
+        </div>
+        <div id="lbContent">
+          <div class="log-empty">Loading leaderboard…</div>
+        </div>
+      </div>
+
+      <footer>
+        Rankings come live from the
+        <a href="https://api.artifactsmmo.com/openapi.json" target="_blank" rel="noopener">Artifacts API</a>.
+        Select an account to view its achievements.
+      </footer>
+    </div>
+
+    <script type="module" src="./js/leaderboard.js"></script>
+  </body>
+</html>
