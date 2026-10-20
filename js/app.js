@@ -12,7 +12,8 @@ import {
   stopAutoRefresh,
 } from "./loader.js";
 import { cardHTML, cooldownRemaining } from "./components/characterCard.js";
-import { bankTileHTML, itemDialogHTML } from "./components/bankSection.js";
+import { itemDialogHTML } from "./components/bankSection.js";
+import { itemTileHTML } from "./components/itemTile.js";
 import { loadItemCatalog, itemByCode, subtypeLabel } from "./items.js";
 import { loadMapCatalog } from "./maps.js";
 import { esc, num, fmtClock, fmtTime, prettyCode } from "./utils.js";
@@ -162,7 +163,7 @@ function renderBankGrid() {
   const items = filteredBankItems();
   els.bankCount.textContent = `· ${items.length} of ${state.bankItems.length} items`;
   els.bankGrid.innerHTML = items.length
-    ? items.map(bankTileHTML).join("")
+    ? items.map(itemTileHTML).join("")
     : `<div class="log-empty">No items match the current filters.</div>`;
 }
 
@@ -440,12 +441,25 @@ function openItemDialog(code) {
   if (typeof els.itemDialog.showModal === "function") els.itemDialog.showModal();
 }
 els.bankGrid.addEventListener("click", (e) => {
-  const tile = e.target.closest(".bank-item");
+  const tile = e.target.closest(".item-tile");
   if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
 });
 els.bankGrid.addEventListener("keydown", (e) => {
   if (e.key !== "Enter" && e.key !== " ") return;
-  const tile = e.target.closest(".bank-item");
+  const tile = e.target.closest(".item-tile");
+  if (tile && tile.dataset.code) {
+    e.preventDefault();
+    openItemDialog(tile.dataset.code);
+  }
+});
+// Inventory tiles inside character cards open the same item dialog.
+els.content.addEventListener("click", (e) => {
+  const tile = e.target.closest(".inv-grid .item-tile");
+  if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
+});
+els.content.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const tile = e.target.closest(".inv-grid .item-tile");
   if (tile && tile.dataset.code) {
     e.preventDefault();
     openItemDialog(tile.dataset.code);
@@ -457,7 +471,7 @@ els.itemDialog.addEventListener("click", (e) => {
 });
 // Tiles inside the dialog (recipe ingredients / used-in items) drill down.
 els.itemDialogBody.addEventListener("click", (e) => {
-  const tile = e.target.closest(".bank-item");
+  const tile = e.target.closest(".item-tile");
   if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
 });
 els.token.addEventListener("keydown", (e) => {

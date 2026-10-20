@@ -2,6 +2,7 @@
 import { LOGS_PER_CHARACTER } from "../config.js";
 import { state } from "../store.js";
 import { getMap, contentOf } from "../maps.js";
+import { itemTileHTML } from "./itemTile.js";
 import { esc, num, pct, fmtClock, fmtTime, prettyCode } from "../utils.js";
 
 const SKILLS = [
@@ -76,18 +77,24 @@ function gearHTML(c) {
       );
     })
     .join("");
-  const invCount = Array.isArray(c.inventory)
-    ? c.inventory.reduce((a, s) => a + (s && s.quantity ? s.quantity : 0), 0)
-    : null;
-  if (!items && invCount == null) return "";
+  const invEntries = (Array.isArray(c.inventory) ? c.inventory : []).filter(
+    (s) => s && s.code
+  );
+  const invTiles = invEntries
+    .map((s) => itemTileHTML({ code: s.code, quantity: s.quantity }))
+    .join("");
+  const invCount = invEntries.reduce((a, s) => a + (s.quantity || 0), 0);
+  if (!items && !invTiles) return "";
   return (
     `<details class="gear"><summary>Equipment &amp; inventory</summary>` +
     (items
       ? `<div class="gear-list">${items}</div>`
       : `<div class="inv-line">No equipment equipped.</div>`) +
-    (invCount != null
-      ? `<div class="inv-line">Inventory: <span class="mono">${num(invCount)} / ${num(c.inventory_max_items)}</span> items</div>`
-      : "") +
+    (invTiles
+      ? `<div class="inv-sec"><div class="inv-line">Inventory: <span class="mono">` +
+        `${num(invCount)} / ${num(c.inventory_max_items)}</span> items</div>` +
+        `<div class="inv-grid">${invTiles}</div></div>`
+      : `<div class="inv-line">Inventory empty.</div>`) +
     `</details>`
   );
 }

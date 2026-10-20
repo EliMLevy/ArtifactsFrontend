@@ -1,22 +1,7 @@
-// Bank item tile renderer (pure: HTML string from a SimpleItemSchema entry).
-// Dense layout: icon + quantity only; the name lives in the tooltip.
+// Item detail dialog content (pure HTML; tile clicks are wired in app.js).
 import { itemByCode, usedIn } from "../items.js";
+import { itemTileHTML } from "./itemTile.js";
 import { esc, num, prettyCode } from "../utils.js";
-
-export function bankTileHTML(entry) {
-  const info = itemByCode.get(entry.code);
-  const name = (info && info.name) || prettyCode(entry.code);
-  const subtype = info && info.subtype ? prettyCode(info.subtype) : null;
-  const title = subtype ? `${name} — ${subtype}` : name;
-  return (
-    `<div class="bank-item" data-code="${esc(entry.code)}" title="${esc(title)}" ` +
-    `role="button" tabindex="0" aria-label="${esc(title)} — view details">` +
-    `<img src="https://artifactsmmo.com/images/items/${encodeURIComponent(entry.code)}.png" ` +
-    `alt="" loading="lazy" onerror="this.remove()">` +
-    `<div class="bank-qty mono">×${num(entry.quantity)}</div>` +
-    `</div>`
-  );
-}
 
 /** Full detail HTML for the item dialog, from the cached catalog entry. */
 export function itemDialogHTML(code) {
@@ -50,7 +35,7 @@ export function itemDialogHTML(code) {
         : "") +
       (craft.quantity ? ` ×${num(craft.quantity)}` : "") +
       `</h4><div class="dialog-tiles">` +
-      ingredients.map((ing) => bankTileHTML({ code: ing.code, quantity: ing.quantity })).join("") +
+      ingredients.map((ing) => itemTileHTML({ code: ing.code, quantity: ing.quantity })).join("") +
       `</div></div>`
     : "";
 
@@ -58,7 +43,7 @@ export function itemDialogHTML(code) {
   const used = usedIn.get(code) || [];
   const usedHtml = used.length
     ? `<div class="dialog-sec"><h4>Used in</h4><div class="dialog-tiles">` +
-      used.map((u) => bankTileHTML(u)).join("") +
+      used.map((u) => itemTileHTML(u)).join("") +
       `</div></div>`
     : "";
 
