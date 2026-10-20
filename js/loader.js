@@ -5,8 +5,6 @@ import {
   getAccountDetails,
   getAccountCharacters,
   getMyCharacters,
-  getMapById,
-  getMapAt,
   getLogs,
   getRateLimits,
   getBankItemsPage,
@@ -61,35 +59,6 @@ export async function refreshLogs() {
   const body = await getLogs(state.token, 1, LOGS_PAGE_SIZE);
   const logs = (body && body.data) || [];
   setLogs(logs);
-}
-
-/** Resolve map names for every distinct map_id on the roster (cached). */
-export async function warmMapCache() {
-  const byId = {};
-  for (const c of state.characters) {
-    if (c.map_id != null && !(c.map_id in state.mapCache)) byId[c.map_id] = c;
-  }
-  await Promise.all(
-    Object.keys(byId).map(async (id) => {
-      const c = byId[id];
-      state.mapCache[id] = null; // mark as loading
-      try {
-        const m = await getMapById(c.map_id);
-        state.mapCache[id] = m && m.name ? m.name : null;
-      } catch {
-        try {
-          if (c.layer && c.x != null && c.y != null) {
-            const m = await getMapAt(c.layer, c.x, c.y);
-            state.mapCache[id] = m && m.name ? m.name : null;
-          } else {
-            state.mapCache[id] = null;
-          }
-        } catch {
-          state.mapCache[id] = null;
-        }
-      }
-    })
-  );
 }
 
 /** Fetch /my/rates (token required) and stash the scopes in state. Silent on failure. */

@@ -1,6 +1,6 @@
 // Bank item tile renderer (pure: HTML string from a SimpleItemSchema entry).
 // Dense layout: icon + quantity only; the name lives in the tooltip.
-import { itemByCode } from "../items.js";
+import { itemByCode, usedIn } from "../items.js";
 import { esc, num, prettyCode } from "../utils.js";
 
 export function bankTileHTML(entry) {
@@ -39,6 +39,29 @@ export function itemDialogHTML(code) {
         )
         .join("")
     : "";
+
+  // Craft recipe (ingredients render as clickable dense tiles, like the bank).
+  const craft = info && info.craft;
+  const ingredients = craft && Array.isArray(craft.items) ? craft.items : [];
+  const recipeHtml = ingredients.length
+    ? `<div class="dialog-sec"><h4>Craft recipe` +
+      (craft.skill
+        ? ` — ${esc(prettyCode(craft.skill))}${craft.level != null ? ` Lvl ${num(craft.level)}` : ""}`
+        : "") +
+      (craft.quantity ? ` ×${num(craft.quantity)}` : "") +
+      `</h4><div class="dialog-tiles">` +
+      ingredients.map((ing) => bankTileHTML({ code: ing.code, quantity: ing.quantity })).join("") +
+      `</div></div>`
+    : "";
+
+  // Reverse lookup: recipes this item is an ingredient in.
+  const used = usedIn.get(code) || [];
+  const usedHtml = used.length
+    ? `<div class="dialog-sec"><h4>Used in</h4><div class="dialog-tiles">` +
+      used.map((u) => bankTileHTML(u)).join("") +
+      `</div></div>`
+    : "";
+
   return (
     `<div class="dialog-item-head">` +
     `<img src="https://artifactsmmo.com/images/items/${encodeURIComponent(code)}.png" ` +
@@ -48,6 +71,8 @@ export function itemDialogHTML(code) {
     `</div>` +
     (tags.length ? `<div class="dialog-tags">${tags.join("")}</div>` : "") +
     (info?.description ? `<p class="dialog-desc">${esc(info.description)}</p>` : "") +
-    (effects ? `<div class="dialog-sec"><h4>Effects</h4>${effects}</div>` : "")
+    (effects ? `<div class="dialog-sec"><h4>Effects</h4>${effects}</div>` : "") +
+    recipeHtml +
+    usedHtml
   );
 }

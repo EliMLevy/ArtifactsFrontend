@@ -9,8 +9,6 @@ export const state = {
   logsByCharacter: {},
   /** true once /my/logs has been fetched successfully (needs a token) */
   logsAvailable: false,
-  /** map_id -> map name (null while loading / on failure) */
-  mapCache: {},
   loading: false,
   autoRefresh: true,
   connected: false,

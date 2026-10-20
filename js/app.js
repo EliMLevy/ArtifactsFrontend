@@ -8,13 +8,13 @@ import {
   refreshLogs,
   fetchRates,
   fetchAllBankItems,
-  warmMapCache,
   startAutoRefresh,
   stopAutoRefresh,
 } from "./loader.js";
 import { cardHTML, cooldownRemaining } from "./components/characterCard.js";
 import { bankTileHTML, itemDialogHTML } from "./components/bankSection.js";
-import { loadItemCatalog, itemByCode, subtypes, subtypeLabel } from "./items.js";
+import { loadItemCatalog, itemByCode, subtypeLabel } from "./items.js";
+import { loadMapCatalog } from "./maps.js";
 import { esc, num, fmtClock, fmtTime, prettyCode } from "./utils.js";
 
 const els = {
@@ -43,7 +43,7 @@ const els = {
   bankSection: document.getElementById("bankSection"),
   bankPanel: document.getElementById("bankPanel"),
   bankSearch: document.getElementById("bankSearch"),
-  bankSubtype: document.getElementById("bankSubtype"),
+  subtypeTags: document.getElementById("subtypeTags"),
   bankGrid: document.getElementById("bankGrid"),
   bankCount: document.getElementById("bankCount"),
   itemDialog: document.getElementById("itemDialog"),
@@ -120,12 +120,28 @@ function renderRates() {
 }
 
 /* ---------- bank section ---------- */
-function populateSubtypeFilter() {
-  const current = els.bankSubtype.value;
-  els.bankSubtype.innerHTML =
-    `<option value="">All subtypes</option>` +
-    subtypes.map((s) => `<option value="${esc(s)}">${esc(subtypeLabel(s))}</option>`).join("");
-  if (current && subtypes.includes(current)) els.bankSubtype.value = current;
+
+/** Subtypes actually present in the bank, with counts — drives the tag row. */
+function bankSubtypes() {
+  const counts = new Map();
+  for (const entry of state.bankItems) {
+    const st = itemByCode.get(entry.code)?.subtype || "";
+    if (!st) continue;
+    counts.set(st, (counts.get(st) || 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+}
+
+function renderSubtypeTags() {
+  const subs = bankSubtypes();
+  els.subtypeTags.innerHTML = subs
+    .map(
+      ([st, n]) =>
+        `<button type="button" class="subtag" data-subtype="${esc(st)}" ` +
+        `aria-pressed="${state.bankFilter.subtype === st ? "true" : "false"}">` +
+        `${esc(subtypeLabel(st))} <span class="mono">${n}</span></button>`
+    )
+    .join("");
 }
 
 function filteredBankItems() {
@@ -153,6 +169,7 @@ function renderBankGrid() {
 function showBankSection() {
   els.bankSection.classList.remove("hidden");
   els.bankPanel.classList.remove("hidden");
+  renderSubtypeTags();
   renderBankGrid();
 }
 
@@ -270,8 +287,6 @@ async function connectAndLoad() {
       via === "accounts" ? `via GET /accounts/${account}/characters` : "via GET /my/characters";
 
     renderCharacters();
-    await warmMapCache();
-    renderCharacters();
     if (token) {
       try {
         await refreshLogs();
@@ -321,7 +336,6 @@ async function refreshData({ logs = false, slow = false } = {}) {
     state.via = via;
     els.endpointNote.textContent =
       via === "accounts" ? `via GET /accounts/${state.account}/characters` : "via GET /my/characters";
-    await warmMapCache();
     if (logs && state.token) {
       try {
         await refreshLogs();
@@ -408,8 +422,13 @@ els.bankSearch.addEventListener("input", () => {
   state.bankFilter.q = els.bankSearch.value;
   renderBankGrid();
 });
-els.bankSubtype.addEventListener("change", () => {
-  state.bankFilter.subtype = els.bankSubtype.value;
+els.subtypeTags.addEventListener("click", (e) => {
+  const tag = e.target.closest(".subtag");
+  if (!tag) return;
+  const st = tag.dataset.subtype;
+  // Single-select toggle: clicking the active tag clears the filter.
+  state.bankFilter.subtype = state.bankFilter.subtype === st ? "" : st;
+  renderSubtypeTags();
   renderBankGrid();
 });
 
@@ -436,6 +455,11 @@ els.itemDialogClose.addEventListener("click", () => els.itemDialog.close());
 els.itemDialog.addEventListener("click", (e) => {
   if (e.target === els.itemDialog) els.itemDialog.close();
 });
+// Tiles inside the dialog (recipe ingredients / used-in items) drill down.
+els.itemDialogBody.addEventListener("click", (e) => {
+  const tile = e.target.closest(".bank-item");
+  if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
+});
 els.token.addEventListener("keydown", (e) => {
   if (e.key === "Enter") connectAndLoad();
 });
@@ -455,7 +479,6 @@ els.clear.addEventListener("click", () => {
   els.token.value = "";
   els.account.value = "";
   els.bankSearch.value = "";
-  els.bankSubtype.value = "";
   els.chip.className = "account-chip";
   els.chip.innerHTML = "";
   els.charCount.textContent = "";
@@ -479,11 +502,9 @@ els.autoToggle.addEventListener("click", () => {
 /* ---------- init ---------- */
 setInterval(tickCooldowns, 1000);
 loadServerStatus();
-loadItemCatalog()
-  .then(populateSubtypeFilter)
-  .catch(() => {
-    /* catalog is a nicety — names fall back to item codes */
-  });
+// Local catalogs are niceties — the dashboard degrades gracefully without them.
+loadItemCatalog().catch(() => {});
+loadMapCatalog().catch(() => {});
 const savedToken = readStore(TOKEN_KEY);
 const savedAccount = readStore(ACCOUNT_KEY);
 if (savedAccount) els.account.value = savedAccount;

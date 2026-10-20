@@ -1,6 +1,7 @@
 // Character card renderer (pure: HTML string from a character object).
 import { LOGS_PER_CHARACTER } from "../config.js";
 import { state } from "../store.js";
+import { getMap, contentOf } from "../maps.js";
 import { esc, num, pct, fmtClock, fmtTime, prettyCode } from "../utils.js";
 
 const SKILLS = [
@@ -113,8 +114,9 @@ export function cardHTML(c, idx) {
   const hpPct = pct(c.hp, c.max_hp);
   const hpClass = hpPct <= 25 ? "hp low" : hpPct <= 55 ? "hp mid" : "hp";
   const xpPct = pct(c.xp, c.max_xp);
-  const mapName = c.map_id != null ? state.mapCache[c.map_id] : null;
-  const place = mapName ? prettyCode(mapName) : "Map #" + (c.map_id != null ? c.map_id : "—");
+  const map = c.map_id != null ? getMap(c.map_id) : null;
+  const place = map && map.name ? prettyCode(map.name) : "Map #" + (c.map_id != null ? c.map_id : "—");
+  const content = c.map_id != null ? contentOf(c.map_id) : null;
   const initials = esc((c.name || "?").slice(0, 2).toUpperCase());
   const skinImg = c.skin
     ? `<img src="https://artifactsmmo.com/images/characters/${encodeURIComponent(c.skin)}.png" alt="" loading="lazy" onerror="this.remove()">`
@@ -137,21 +139,24 @@ export function cardHTML(c, idx) {
     `<div class="card-top">` +
     `<div class="avatar" aria-hidden="true">${initials}${skinImg}</div>` +
     `<div class="card-id"><div class="card-name">${esc(c.name)}</div>` +
-    `<div class="card-meta"><span>${esc(c.account || state.account)}</span>` +
-    (c.skin ? `<span>· skin ${esc(c.skin)}</span>` : "") +
-    `<span>· <span class="mono">${num(c.gold)}</span> gold</span></div></div>` +
+    `<div class="card-meta"><span class="mono">${num(c.gold)}</span> gold</div></div>` +
     `<div class="lvl"><div class="n">${num(c.level)}</div><div class="t">Level</div></div>` +
     `</div>` +
     `<div class="loc"><span aria-hidden="true">📍</span><span class="place">${esc(place)}</span>` +
-    `<span class="coords mono">(${num(c.x)}, ${num(c.y)})</span>` +
+    (content
+      ? `<span class="coords">${esc(prettyCode(content.code))}</span>` +
+        `<span class="tag">${esc(prettyCode(content.type))}</span>`
+      : `<span class="coords mono">(${num(c.x)}, ${num(c.y)})</span>`) +
     (c.layer ? `<span class="tag">${esc(c.layer)}</span>` : "") +
     `<span class="tag">Map ${c.map_id != null ? c.map_id : "—"}</span></div>` +
+    `<div class="bars-row">` +
     `<div class="bar-row"><div class="bar-head"><span class="lbl">❤ Health</span>` +
     `<span class="val">${num(c.hp)} / ${num(c.max_hp)} HP</span></div>` +
     `<div class="bar ${hpClass}"><i style="width:${hpPct.toFixed(1)}%"></i></div></div>` +
     `<div class="bar-row"><div class="bar-head"><span class="lbl">Combat XP</span>` +
     `<span class="val">${num(c.xp)} / ${num(c.max_xp)}</span></div>` +
     `<div class="bar xp"><i style="width:${xpPct.toFixed(1)}%"></i></div></div>` +
+    `</div>` +
     `<div class="cd-box" data-cd-box>` +
     `<div class="cd-head"><span class="lbl">Cooldown</span><span class="cd-time" data-cd-time></span></div>` +
     `<div class="bar cd" data-cd-bar-wrap><i data-cd-bar style="width:${cdPct.toFixed(1)}%"></i></div>` +
