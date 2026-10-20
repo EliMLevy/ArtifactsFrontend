@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Artifacts Achievements</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <nav class="site-nav" aria-label="Site">
+        <span class="nav-brand">⚔️ Artifacts</span>
+        <a href="./index.html" class="nav-link">Dashboard</a>
+        <a href="./achievements.html" class="nav-link active" aria-current="page">Achievements</a>
+      </nav>
+
+      <div class="section-head">
+        <h2>Achievements</h2>
+        <span class="count" id="achCount"></span>
+        <span class="spacer"></span>
+        <span class="count" id="achPoints"></span>
+      </div>
+
+      <!-- Shown only when no account is saved from the dashboard -->
+      <section class="panel hidden" id="accountPanel" aria-labelledby="accountHeading">
+        <h2 id="accountHeading">Which account?</h2>
+        <p class="sub">Achievements are public — enter an account username to view its progress.
+          If you connect on the dashboard first, it will be remembered here automatically.</p>
+        <div class="form-grid">
+          <label class="field">
+            <span>Account username</span>
+            <input type="text" id="accountInput" autocomplete="off" spellcheck="false" placeholder="e.g. my_account" />
+          </label>
+        </div>
+        <div class="actions">
+          <button type="button" class="primary" id="accountBtn">View achievements</button>
+        </div>
+        <div class="banner" id="accountBanner" role="alert"></div>
+      </section>
+
+      <div class="panel ach-panel">
+        <div class="bank-filters">
+          <input type="text" id="achSearch" autocomplete="off" spellcheck="false"
+                 placeholder="Search achievements by name…" aria-label="Search achievements by name" />
+        </div>
+        <div id="achContent">
+          <div class="log-empty">Loading achievements…</div>
+        </div>
+      </div>
+
+      <footer>
+        Achievement progress comes live from the
+        <a href="https://api.artifactsmmo.com/openapi.json" target="_blank" rel="noopener">Artifacts API</a>
+        each time this page loads.
+      </footer>
+    </div>
+
+    <script type="module" src="./js/achievements.js"></script>
+  </body>
+</html>

@@ -67,3 +67,10 @@ export const getRateLimits = (token) => apiFetch("/my/rates", token);
 /** GET /my/bank/items — one page of bank contents (JWT auth). */
 export const getBankItemsPage = (token, page = 1, size = 100) =>
   apiFetch(`/my/bank/items?page=${page}&size=${size}`, token);
+
+/**
+ * GET /accounts/{account}/achievements — public; includes per-objective
+ * progress and completed_at. Returns the raw paged body.
+ */
+export const getAccountAchievementsPage = (account, page = 1, size = 100) =>
+  apiFetch(`/accounts/${encodeURIComponent(account)}/achievements?page=${page}&size=${size}`);

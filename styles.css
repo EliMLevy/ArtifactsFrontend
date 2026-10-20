@@ -337,6 +337,42 @@ details.gear summary { cursor: pointer; font-size: 13.5px; font-weight: 600; col
 .dialog-tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .dialog-tiles { display: flex; flex-wrap: wrap; gap: 6px; }
 .dialog-tiles .item-tile { width: 62px; flex: none; }
+
+/* ---------- site nav ---------- */
+.site-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.nav-brand { font-family: "Cinzel", serif; font-weight: 700; font-size: 18px; margin-right: 6px; }
+.nav-link {
+  padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line);
+  color: var(--ink-2); text-decoration: none; font-weight: 600; font-size: 13.5px;
+  background: var(--surface);
+}
+.nav-link:hover { border-color: var(--accent); }
+.nav-link.active { background: var(--accent); border-color: var(--accent); color: #fff8e7; }
+@media (prefers-color-scheme: dark) { .nav-link.active { color: #241a02; } }
+
+/* ---------- achievements ---------- */
+.ach-card { display: grid; gap: 9px; align-content: start; }
+.ach-card.completed {
+  border-color: var(--good);
+  box-shadow: inset 0 0 0 1px var(--good);
+  background: color-mix(in srgb, var(--good) 9%, var(--surface));
+}
+.ach-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.ach-name { margin: 0; font-size: 16px; }
+.ach-points { color: var(--ink-2); font-size: 12.5px; white-space: nowrap; }
+.ach-desc { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+.ach-objs { display: grid; gap: 8px; }
+.ach-obj-top { display: flex; gap: 8px; align-items: baseline; font-size: 12.5px; margin-bottom: 4px; }
+.ach-obj-target { font-weight: 600; }
+.ach-obj-nums { margin-left: auto; color: var(--ink-2); }
+.ach-rewards { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12.5px; }
+.ach-rewards-lbl { color: var(--ink-2); font-weight: 600; }
+.ach-reward-item {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 2px 7px 2px 3px;
+}
+.ach-reward-item img { width: 20px; height: 20px; object-fit: contain; image-rendering: pixelated; display: block; }
+.ach-done { color: var(--good); font-weight: 700; font-size: 13px; }
 .dialog-desc { margin: 0; font-size: 14px; color: var(--ink-2); }
 .dialog-sec h4 {
   font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
