@@ -60,3 +60,10 @@ export const getMapAt = (layer, x, y) =>
  */
 export const getLogs = (token, page = 1, size = 100) =>
   apiFetch(`/my/logs?page=${page}&size=${size}`, token);
+
+/** GET /my/rates — account rate limits (JWT auth). */
+export const getRateLimits = (token) => apiFetch("/my/rates", token);
+
+/** GET /my/bank/items — one page of bank contents (JWT auth). */
+export const getBankItemsPage = (token, page = 1, size = 100) =>
+  apiFetch(`/my/bank/items?page=${page}&size=${size}`, token);

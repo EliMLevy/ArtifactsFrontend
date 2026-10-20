@@ -19,6 +19,7 @@
         <span class="pill hidden" id="seasonPill">Season <strong id="seasonName"></strong></span>
         <span class="pill hidden" id="onlinePill"><strong id="onlineCount"></strong>&nbsp;characters online</span>
         <span class="pill hidden" id="versionPill">API v<strong id="apiVersion"></strong></span>
+        <span class="pill hidden" id="ratesPill" title="Remaining Artifacts API calls"></span>
         <span class="strip-spacer"></span>
         <span class="updated" id="lastUpdated"></span>
       </div>
@@ -60,6 +61,23 @@
         <div class="account-chip" id="accountChip" role="status"></div>
         <div class="banner" id="banner" role="alert"></div>
       </section>
+
+      <!-- Bank (token required) -->
+      <div class="section-head hidden" id="bankSection">
+        <h2>Bank</h2>
+        <span class="count" id="bankCount"></span>
+        <span class="spacer"></span>
+      </div>
+      <div class="panel bank-panel hidden" id="bankPanel">
+        <div class="bank-filters">
+          <input type="text" id="bankSearch" autocomplete="off" spellcheck="false"
+                 placeholder="Search items by name or code…" aria-label="Search bank items" />
+          <select id="bankSubtype" aria-label="Filter by item subtype">
+            <option value="">All subtypes</option>
+          </select>
+        </div>
+        <div class="bank-grid" id="bankGrid"></div>
+      </div>
 
       <!-- Characters -->
       <div class="section-head">

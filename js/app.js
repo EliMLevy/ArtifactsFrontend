@@ -1,16 +1,20 @@
 // App bootstrap: DOM wiring, rendering, cooldown ticker, init.
-import { TOKEN_KEY, ACCOUNT_KEY, LOGS_EVERY_N_TICKS } from "./config.js";
+import { TOKEN_KEY, ACCOUNT_KEY, LOGS_EVERY_N_TICKS, SLOW_EVERY_N_TICKS } from "./config.js";
 import { state, readStore, saveCredentials, clearCredentials, resetConnectionState } from "./store.js";
 import { getServerStatus } from "./api.js";
 import {
   resolveAccount,
   fetchCharacters,
   refreshLogs,
+  fetchRates,
+  fetchAllBankItems,
   warmMapCache,
   startAutoRefresh,
   stopAutoRefresh,
 } from "./loader.js";
 import { cardHTML, cooldownRemaining } from "./components/characterCard.js";
+import { bankTileHTML } from "./components/bankSection.js";
+import { loadItemCatalog, itemByCode, subtypes, subtypeLabel } from "./items.js";
 import { esc, num, fmtClock, fmtTime, prettyCode } from "./utils.js";
 
 const els = {
@@ -35,6 +39,13 @@ const els = {
   onlineCount: document.getElementById("onlineCount"),
   versionPill: document.getElementById("versionPill"),
   apiVersion: document.getElementById("apiVersion"),
+  ratesPill: document.getElementById("ratesPill"),
+  bankSection: document.getElementById("bankSection"),
+  bankPanel: document.getElementById("bankPanel"),
+  bankSearch: document.getElementById("bankSearch"),
+  bankSubtype: document.getElementById("bankSubtype"),
+  bankGrid: document.getElementById("bankGrid"),
+  bankCount: document.getElementById("bankCount"),
 };
 
 /* ---------- banner ---------- */
@@ -82,6 +93,70 @@ function renderAccountChip(d) {
   if (d.banned) bits.push(`<span>⚠ Banned${d.ban_reason ? ": " + esc(d.ban_reason) : ""}</span>`);
   els.chip.innerHTML = bits.join("");
   els.chip.className = "account-chip show";
+}
+
+/* ---------- rate-limit monitor ---------- */
+function renderRates() {
+  const scope = state.rates && state.rates.data;
+  if (!scope) {
+    els.ratesPill.classList.add("hidden");
+    return;
+  }
+  const bits = [];
+  if (scope.minute) bits.push(`<strong>${num(scope.minute.remaining)}</strong>/min`);
+  if (scope.hour) bits.push(`<strong>${num(scope.hour.remaining)}</strong>/hr`);
+  if (scope.day) bits.push(`<strong>${num(scope.day.remaining)}</strong>/day`);
+  if (!bits.length) {
+    els.ratesPill.classList.add("hidden");
+    return;
+  }
+  els.ratesPill.innerHTML = `⏱ ${bits.join(" · ")} left`;
+  els.ratesPill.classList.remove("hidden");
+  els.ratesPill.title = "Remaining Artifacts API calls (data endpoints)";
+}
+
+/* ---------- bank section ---------- */
+function populateSubtypeFilter() {
+  const current = els.bankSubtype.value;
+  els.bankSubtype.innerHTML =
+    `<option value="">All subtypes</option>` +
+    subtypes.map((s) => `<option value="${esc(s)}">${esc(subtypeLabel(s))}</option>`).join("");
+  if (current && subtypes.includes(current)) els.bankSubtype.value = current;
+}
+
+function filteredBankItems() {
+  const q = state.bankFilter.q.trim().toLowerCase();
+  const st = state.bankFilter.subtype;
+  return state.bankItems.filter((entry) => {
+    const info = itemByCode.get(entry.code);
+    if (st && (info?.subtype || "") !== st) return false;
+    if (q) {
+      const name = ((info && info.name) || entry.code).toLowerCase();
+      if (!name.includes(q) && !entry.code.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderBankGrid() {
+  const items = filteredBankItems();
+  els.bankCount.textContent = `· ${items.length} of ${state.bankItems.length} items`;
+  els.bankGrid.innerHTML = items.length
+    ? items.map(bankTileHTML).join("")
+    : `<div class="log-empty">No items match the current filters.</div>`;
+}
+
+function showBankSection() {
+  els.bankSection.classList.remove("hidden");
+  els.bankPanel.classList.remove("hidden");
+  renderBankGrid();
+}
+
+function hideBankSection() {
+  els.bankSection.classList.add("hidden");
+  els.bankPanel.classList.add("hidden");
+  els.bankGrid.innerHTML = "";
+  els.bankCount.textContent = "";
 }
 
 /* ---------- character rendering ---------- */
@@ -200,6 +275,18 @@ async function connectAndLoad() {
         /* logs are a bonus — a failure here must not break the dashboard */
       }
       renderCharacters();
+      try {
+        await fetchRates();
+      } catch {
+        /* rates are informational */
+      }
+      renderRates();
+      try {
+        await fetchAllBankItems();
+      } catch {
+        /* bank is optional on failure */
+      }
+      showBankSection();
     }
     els.lastUpdated.textContent = `Updated ${new Date().toLocaleTimeString([], {
       hour: "numeric",
@@ -220,8 +307,8 @@ async function connectAndLoad() {
   }
 }
 
-/** Lightweight 5s refresh: roster (+ logs every Nth tick), no skeletons. */
-async function refreshData(includeLogs) {
+/** Lightweight 5s refresh: roster (+ logs / bank+rates on slower cadences). */
+async function refreshData({ logs = false, slow = false } = {}) {
   if (!state.connected || state.loading) return;
   state.loading = true;
   try {
@@ -231,12 +318,26 @@ async function refreshData(includeLogs) {
     els.endpointNote.textContent =
       via === "accounts" ? `via GET /accounts/${state.account}/characters` : "via GET /my/characters";
     await warmMapCache();
-    if (includeLogs && state.token) {
+    if (logs && state.token) {
       try {
         await refreshLogs();
       } catch {
         /* keep old logs on failure */
       }
+    }
+    if (slow && state.token) {
+      try {
+        await fetchRates();
+      } catch {
+        /* silent */
+      }
+      renderRates();
+      try {
+        await fetchAllBankItems();
+      } catch {
+        /* keep old bank contents on failure */
+      }
+      renderBankGrid();
     }
     hideBanner();
     renderCharacters();
@@ -246,14 +347,29 @@ async function refreshData(includeLogs) {
       second: "2-digit",
     })}`;
   } catch (err) {
-    showBanner(friendlyError(err) + " (auto-refresh will retry)");
+    if (err && err.status === 429 && !state.backingOff) {
+      // Rate limited: pause auto-refresh for 60s, then resume automatically.
+      state.backingOff = true;
+      stopAutoRefresh();
+      showBanner("Rate limited by the Artifacts API (HTTP 429) — auto-refresh paused for 60s.");
+      setTimeout(() => {
+        state.backingOff = false;
+        hideBanner();
+        if (state.autoRefresh && state.connected) startAutoRefresh(onAutoTick);
+      }, 60000);
+    } else {
+      showBanner(friendlyError(err) + " (auto-refresh will retry)");
+    }
   } finally {
     state.loading = false;
   }
 }
 
 function onAutoTick(tickCount) {
-  refreshData(tickCount % LOGS_EVERY_N_TICKS === 0);
+  refreshData({
+    logs: tickCount % LOGS_EVERY_N_TICKS === 0,
+    slow: tickCount % SLOW_EVERY_N_TICKS === 0,
+  });
 }
 
 /* ---------- server status strip ---------- */
@@ -283,7 +399,15 @@ function loadServerStatus() {
 
 /* ---------- events ---------- */
 els.connect.addEventListener("click", connectAndLoad);
-els.refresh.addEventListener("click", () => refreshData(true));
+els.refresh.addEventListener("click", () => refreshData({ logs: true, slow: true }));
+els.bankSearch.addEventListener("input", () => {
+  state.bankFilter.q = els.bankSearch.value;
+  renderBankGrid();
+});
+els.bankSubtype.addEventListener("change", () => {
+  state.bankFilter.subtype = els.bankSubtype.value;
+  renderBankGrid();
+});
 els.token.addEventListener("keydown", (e) => {
   if (e.key === "Enter") connectAndLoad();
 });
@@ -302,12 +426,16 @@ els.clear.addEventListener("click", () => {
   stopAutoRefresh();
   els.token.value = "";
   els.account.value = "";
+  els.bankSearch.value = "";
+  els.bankSubtype.value = "";
   els.chip.className = "account-chip";
   els.chip.innerHTML = "";
   els.charCount.textContent = "";
   els.endpointNote.textContent = "";
   els.lastUpdated.textContent = "";
   els.refresh.disabled = true;
+  els.ratesPill.classList.add("hidden");
+  hideBankSection();
   hideBanner();
   els.content.innerHTML =
     `<div class="empty"><h3>Token forgotten</h3>` +
@@ -323,6 +451,11 @@ els.autoToggle.addEventListener("click", () => {
 /* ---------- init ---------- */
 setInterval(tickCooldowns, 1000);
 loadServerStatus();
+loadItemCatalog()
+  .then(populateSubtypeFilter)
+  .catch(() => {
+    /* catalog is a nicety — names fall back to item codes */
+  });
 const savedToken = readStore(TOKEN_KEY);
 const savedAccount = readStore(ACCOUNT_KEY);
 if (savedAccount) els.account.value = savedAccount;

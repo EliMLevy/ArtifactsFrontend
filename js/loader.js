@@ -1,5 +1,5 @@
 // Data orchestration: account resolution, roster + log fetching, refresh loop.
-import { REFRESH_MS, LOGS_PAGE_SIZE } from "./config.js";
+import { REFRESH_MS, LOGS_PAGE_SIZE, BANK_PAGE_SIZE, BANK_MAX_PAGES } from "./config.js";
 import { state, setLogs } from "./store.js";
 import {
   getAccountDetails,
@@ -8,6 +8,8 @@ import {
   getMapById,
   getMapAt,
   getLogs,
+  getRateLimits,
+  getBankItemsPage,
 } from "./api.js";
 
 let refreshTimer = null;
@@ -88,6 +90,31 @@ export async function warmMapCache() {
       }
     })
   );
+}
+
+/** Fetch /my/rates (token required) and stash the scopes in state. Silent on failure. */
+export async function fetchRates() {
+  if (!state.token) return;
+  try {
+    const body = await getRateLimits(state.token);
+    state.rates = (body && body.data) || null;
+  } catch {
+    /* rates are informational — never break the dashboard */
+  }
+}
+
+/** Page through /my/bank/items (token required) and stash everything in state. */
+export async function fetchAllBankItems() {
+  if (!state.token) return;
+  const all = [];
+  for (let page = 1; page <= BANK_MAX_PAGES; page++) {
+    const body = await getBankItemsPage(state.token, page, BANK_PAGE_SIZE);
+    const items = (body && body.data) || [];
+    all.push(...items);
+    const pages = body && body.pages;
+    if (items.length < BANK_PAGE_SIZE || (pages && page >= pages)) break;
+  }
+  state.bankItems = all;
 }
 
 export function startAutoRefresh(onTick) {
