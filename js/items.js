@@ -12,7 +12,11 @@ export let subtypes = [];
 
 export async function loadItemCatalog() {
   if (loaded) return;
-  const res = await fetch("../data/items.json");
+  // NOTE: fetch() resolves relative URLs against the *document*, not this
+  // module — so anchor to the module's own URL to find data/items.json
+  // regardless of where the page is served from.
+  const url = new URL("../data/items.json", import.meta.url);
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Item catalog failed to load (HTTP ${res.status})`);
   const items = await res.json();
   const subs = new Set();

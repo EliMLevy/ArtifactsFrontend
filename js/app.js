@@ -13,7 +13,7 @@ import {
   stopAutoRefresh,
 } from "./loader.js";
 import { cardHTML, cooldownRemaining } from "./components/characterCard.js";
-import { bankTileHTML } from "./components/bankSection.js";
+import { bankTileHTML, itemDialogHTML } from "./components/bankSection.js";
 import { loadItemCatalog, itemByCode, subtypes, subtypeLabel } from "./items.js";
 import { esc, num, fmtClock, fmtTime, prettyCode } from "./utils.js";
 
@@ -46,6 +46,10 @@ const els = {
   bankSubtype: document.getElementById("bankSubtype"),
   bankGrid: document.getElementById("bankGrid"),
   bankCount: document.getElementById("bankCount"),
+  itemDialog: document.getElementById("itemDialog"),
+  itemDialogName: document.getElementById("itemDialogName"),
+  itemDialogBody: document.getElementById("itemDialogBody"),
+  itemDialogClose: document.getElementById("itemDialogClose"),
 };
 
 /* ---------- banner ---------- */
@@ -407,6 +411,30 @@ els.bankSearch.addEventListener("input", () => {
 els.bankSubtype.addEventListener("change", () => {
   state.bankFilter.subtype = els.bankSubtype.value;
   renderBankGrid();
+});
+
+/* ---------- item detail dialog ---------- */
+function openItemDialog(code) {
+  const info = itemByCode.get(code);
+  els.itemDialogName.textContent = (info && info.name) || prettyCode(code);
+  els.itemDialogBody.innerHTML = itemDialogHTML(code);
+  if (typeof els.itemDialog.showModal === "function") els.itemDialog.showModal();
+}
+els.bankGrid.addEventListener("click", (e) => {
+  const tile = e.target.closest(".bank-item");
+  if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
+});
+els.bankGrid.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const tile = e.target.closest(".bank-item");
+  if (tile && tile.dataset.code) {
+    e.preventDefault();
+    openItemDialog(tile.dataset.code);
+  }
+});
+els.itemDialogClose.addEventListener("click", () => els.itemDialog.close());
+els.itemDialog.addEventListener("click", (e) => {
+  if (e.target === els.itemDialog) els.itemDialog.close();
 });
 els.token.addEventListener("keydown", (e) => {
   if (e.key === "Enter") connectAndLoad();
