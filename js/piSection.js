@@ -3,7 +3,7 @@
 import { state } from "./store.js";
 import { esc, num } from "./utils.js";
 
-const PI_BASE = "http://raspberrypi:3000";
+const PI_BASE = "https://artifacts.home";
 const PI_REFRESH_MS = 30000;
 
 let els = null;
@@ -72,7 +72,7 @@ async function loadPi() {
   } catch {
     els.piState.textContent = "Pi unreachable";
     els.piLogs.textContent =
-      "Could not reach http://raspberrypi:3000 — this panel only works on your local network.";
+      "Could not reach https://artifacts.home — this panel only works on your local network, with Caddy's root CA trusted on this device.";
     els.piCount.textContent = "";
   } finally {
     loading = false;
