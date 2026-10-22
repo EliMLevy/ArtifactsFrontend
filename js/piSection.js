@@ -4,7 +4,7 @@ import { state } from "./store.js";
 import { esc, num } from "./utils.js";
 
 const PI_BASE = "https://artifacts.home";
-const PI_REFRESH_MS = 30000;
+const PI_REFRESH_MS = 3000;
 
 let els = null;
 let activeFilter = "";
@@ -56,6 +56,11 @@ function renderFilters() {
 async function loadPi() {
   if (loading) return;
   loading = true;
+  // Capture scroll state before swapping the text: with autoscroll on we
+  // stick to the bottom (newest lines); with it off we keep the user's
+  // place so the 3s refresh doesn't yank the view around.
+  const stick = els.piAutoscroll.checked;
+  const prevScrollTop = els.piLogs.scrollTop;
   try {
     const logsPath = activeFilter
       ? `/api/logs?query=${encodeURIComponent(activeFilter)}`
@@ -75,6 +80,8 @@ async function loadPi() {
       "Could not reach https://artifacts.home — this panel only works on your local network, with Caddy's root CA trusted on this device.";
     els.piCount.textContent = "";
   } finally {
+    if (stick) els.piLogs.scrollTop = els.piLogs.scrollHeight;
+    else els.piLogs.scrollTop = prevScrollTop;
     loading = false;
   }
 }
@@ -85,9 +92,13 @@ export function initPiSection() {
     piCount: document.getElementById("piCount"),
     piFilters: document.getElementById("piFilters"),
     piLogs: document.getElementById("piLogs"),
+    piAutoscroll: document.getElementById("piAutoscroll"),
     piRefresh: document.getElementById("piRefresh"),
   };
   renderFilters();
+  els.piAutoscroll.addEventListener("change", () => {
+    if (els.piAutoscroll.checked) els.piLogs.scrollTop = els.piLogs.scrollHeight;
+  });
   els.piFilters.addEventListener("click", (e) => {
     const tag = e.target.closest(".typetag");
     if (!tag) return;
