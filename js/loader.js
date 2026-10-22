@@ -8,6 +8,7 @@ import {
   getLogs,
   getRateLimits,
   getBankItemsPage,
+  getBankDetails,
 } from "./api.js";
 
 let refreshTimer = null;
@@ -69,6 +70,17 @@ export async function fetchRates() {
     state.rates = (body && body.data) || null;
   } catch {
     /* rates are informational — never break the dashboard */
+  }
+}
+
+/** Fetch /my/bank details (slots, next expansion cost) into state. Silent on failure. */
+export async function fetchBankDetails() {
+  if (!state.token) return;
+  try {
+    const body = await getBankDetails(state.token);
+    state.bankDetails = (body && body.data) || null;
+  } catch {
+    /* bank details are informational — never break the dashboard */
   }
 }
 

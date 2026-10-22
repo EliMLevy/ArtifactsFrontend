@@ -68,6 +68,9 @@ export const getRateLimits = (token) => apiFetch("/my/rates", token);
 export const getBankItemsPage = (token, page = 1, size = 100) =>
   apiFetch(`/my/bank/items?page=${page}&size=${size}`, token);
 
+/** GET /my/bank — bank details: slots, expansions, next expansion cost, gold. */
+export const getBankDetails = (token) => apiFetch("/my/bank", token);
+
 /**
  * GET /accounts/{account}/achievements — public; includes per-objective
  * progress and completed_at. Returns the raw paged body.

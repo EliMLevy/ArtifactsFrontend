@@ -8,6 +8,7 @@ import {
   refreshLogs,
   fetchRates,
   fetchAllBankItems,
+  fetchBankDetails,
   startAutoRefresh,
   stopAutoRefresh,
 } from "./loader.js";
@@ -48,6 +49,7 @@ const els = {
   typeTags: document.getElementById("typeTags"),
   bankGrid: document.getElementById("bankGrid"),
   bankCount: document.getElementById("bankCount"),
+  bankInfo: document.getElementById("bankInfo"),
   itemDialog: document.getElementById("itemDialog"),
   itemDialogName: document.getElementById("itemDialogName"),
   itemDialogBody: document.getElementById("itemDialogBody"),
@@ -160,9 +162,17 @@ function filteredBankItems() {
   });
 }
 
+function renderBankInfo() {
+  const d = state.bankDetails;
+  els.bankInfo.textContent = d
+    ? `· ${state.bankItems.length} / ${num(d.slots)} slots · next expansion ${num(d.next_expansion_cost)} gold`
+    : "";
+}
+
 function renderBankGrid() {
   const items = filteredBankItems();
   els.bankCount.textContent = `· ${items.length} of ${state.bankItems.length} items`;
+  renderBankInfo();
   els.bankGrid.innerHTML = items.length
     ? items.map(itemTileHTML).join("")
     : `<div class="log-empty">No items match the current filters.</div>`;
@@ -180,6 +190,7 @@ function hideBankSection() {
   els.bankPanel.classList.add("hidden");
   els.bankGrid.innerHTML = "";
   els.bankCount.textContent = "";
+  els.bankInfo.textContent = "";
 }
 
 /* ---------- character rendering ---------- */
@@ -196,6 +207,19 @@ function closedGearNames() {
   return closed;
 }
 
+/** Log-list scroll offsets per character, so re-renders don't snap to top. */
+function logScrollPositions() {
+  const pos = new Map();
+  els.content.querySelectorAll(".card").forEach((card) => {
+    const list = card.querySelector(".log-list");
+    if (list && list.scrollTop > 0) {
+      const c = state.characters[Number(card.getAttribute("data-idx"))];
+      if (c) pos.set(c.name, list.scrollTop);
+    }
+  });
+  return pos;
+}
+
 function renderCharacters() {
   if (!state.characters.length) {
     els.charCount.textContent = "";
@@ -207,15 +231,22 @@ function renderCharacters() {
     return;
   }
   const gearClosed = closedGearNames();
+  const logScroll = logScrollPositions();
   els.charCount.textContent = `· ${state.characters.length} ${state.characters.length === 1 ? "character" : "characters"}`;
   els.content.innerHTML =
     '<div class="grid">' + state.characters.map((c, i) => cardHTML(c, i)).join("") + "</div>";
-  // Gear sections are open by default; re-collapse any the user closed.
+  // Gear sections are open by default; re-collapse any the user closed,
+  // and restore log scroll positions so refreshes don't snap to the top.
   els.content.querySelectorAll(".card").forEach((card) => {
     const c = state.characters[Number(card.getAttribute("data-idx"))];
-    if (c && gearClosed.has(c.name)) {
+    if (!c) return;
+    if (gearClosed.has(c.name)) {
       const d = card.querySelector("details.gear");
       if (d) d.open = false;
+    }
+    if (logScroll.has(c.name)) {
+      const list = card.querySelector(".log-list");
+      if (list) list.scrollTop = logScroll.get(c.name);
     }
   });
   tickCooldowns();
@@ -303,6 +334,7 @@ async function connectAndLoad() {
         /* rates are informational */
       }
       renderRates();
+      await fetchBankDetails();
       try {
         await fetchAllBankItems();
       } catch {
@@ -353,6 +385,7 @@ async function refreshData({ logs = false, slow = false } = {}) {
         /* silent */
       }
       renderRates();
+      await fetchBankDetails();
       try {
         await fetchAllBankItems();
       } catch {

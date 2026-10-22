@@ -16,6 +16,8 @@ export const state = {
   via: "",
   /** SimpleItemSchema[] — full bank contents (token required) */
   bankItems: [],
+  /** BankSchema | null — slots, expansions, next expansion cost, bank gold */
+  bankDetails: null,
   bankFilter: { q: "", type: "" },
   /** RateLimitsDataSchema | null */
   rates: null,
@@ -73,6 +75,7 @@ export function resetConnectionState() {
   state.connected = false;
   state.via = "";
   state.bankItems = [];
+  state.bankDetails = null;
   state.bankFilter = { q: "", type: "" };
   state.rates = null;
   state.backingOff = false;
