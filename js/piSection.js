@@ -3,7 +3,7 @@
 import { state } from "./store.js";
 import { esc, num } from "./utils.js";
 
-const PI_BASE = "http://raspberrypi:8080";
+const PI_BASE = "http://raspberrypi:3000";
 const PI_REFRESH_MS = 30000;
 
 let els = null;
@@ -72,7 +72,7 @@ async function loadPi() {
   } catch {
     els.piState.textContent = "Pi unreachable";
     els.piLogs.textContent =
-      "Could not reach http://raspberrypi:8080 — this panel only works on your local network.";
+      "Could not reach http://raspberrypi:3000 — this panel only works on your local network.";
     els.piCount.textContent = "";
   } finally {
     loading = false;
