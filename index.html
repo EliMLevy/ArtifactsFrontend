@@ -88,6 +88,19 @@
         <div class="bank-grid" id="bankGrid"></div>
       </div>
 
+      <!-- Pi logs (local network only) -->
+      <div class="section-head" id="piSection">
+        <h2>Pi Logs</h2>
+        <span class="count" id="piCount"></span>
+        <span class="spacer"></span>
+        <button type="button" class="small ghost" id="piRefresh">Refresh</button>
+      </div>
+      <div class="panel pi-panel">
+        <div class="pi-state">State: <span class="mono" id="piState">…</span></div>
+        <div class="type-tags" id="piFilters" role="group" aria-label="Filter Pi logs"></div>
+        <pre class="pi-logs" id="piLogs">Loading…</pre>
+      </div>
+
       <!-- Characters -->
       <div class="section-head">
         <h2>Characters</h2>

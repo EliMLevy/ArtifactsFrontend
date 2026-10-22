@@ -347,6 +347,16 @@ details.gear summary { cursor: pointer; font-size: 13.5px; font-weight: 600; col
 .dialog-tiles { display: flex; flex-wrap: wrap; gap: 6px; }
 .dialog-tiles .item-tile { width: 62px; flex: none; }
 
+/* ---------- pi logs ---------- */
+.pi-state { font-size: 13px; color: var(--ink-2); margin-bottom: 10px; }
+.pi-state .mono { color: var(--ink); }
+.pi-logs {
+  margin: 0; background: #000; color: #fff; border: 1px solid #000; border-radius: 10px;
+  font-family: "IBM Plex Mono", monospace; font-size: 12px; line-height: 1.5;
+  padding: 12px 14px; max-height: 380px; overflow: auto;
+  white-space: pre-wrap; word-break: break-word;
+}
+
 /* ---------- site nav ---------- */
 .site-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
 .nav-brand { font-family: "Cinzel", serif; font-weight: 700; font-size: 18px; margin-right: 6px; }

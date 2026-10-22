@@ -16,6 +16,7 @@ import { cardHTML, cooldownRemaining } from "./components/characterCard.js";
 import { itemDialogHTML } from "./components/bankSection.js";
 import { itemTileHTML } from "./components/itemTile.js";
 import { loadItemCatalog, itemByCode } from "./items.js";
+import { initPiSection } from "./piSection.js";
 import { loadMapCatalog } from "./maps.js";
 import { esc, num, fmtClock, fmtTime, prettyCode } from "./utils.js";
 
@@ -560,6 +561,7 @@ els.autoToggle.addEventListener("click", () => {
 /* ---------- init ---------- */
 setInterval(tickCooldowns, 1000);
 loadServerStatus();
+initPiSection();
 // Local catalogs are niceties — the dashboard degrades gracefully without them.
 loadItemCatalog().catch(() => {});
 loadMapCatalog().catch(() => {});
