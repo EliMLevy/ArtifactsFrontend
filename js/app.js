@@ -165,7 +165,7 @@ function filteredBankItems() {
 function renderBankInfo() {
   const d = state.bankDetails;
   els.bankInfo.textContent = d
-    ? `· ${state.bankItems.length} / ${num(d.slots)} slots · next expansion ${num(d.next_expansion_cost)} gold`
+    ? `· ${state.bankItems.length} / ${num(d.slots)} slots · ${num(d.gold)} gold in bank · next expansion ${num(d.next_expansion_cost)} gold`
     : "";
 }
 
