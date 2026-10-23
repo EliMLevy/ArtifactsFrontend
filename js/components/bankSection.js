@@ -47,6 +47,12 @@ export function itemDialogHTML(code) {
       `</div></div>`
     : "";
 
+  // The full catalog object, collapsed until the user asks for it.
+  const jsonHtml = info
+    ? `<details class="dialog-sec json-sec"><summary>Raw JSON</summary>` +
+      `<pre class="item-json">${esc(JSON.stringify(info, null, 2))}</pre></details>`
+    : "";
+
   return (
     `<div class="dialog-item-head">` +
     `<img src="https://artifactsmmo.com/images/items/${encodeURIComponent(code)}.png" ` +
@@ -58,6 +64,7 @@ export function itemDialogHTML(code) {
     (info?.description ? `<p class="dialog-desc">${esc(info.description)}</p>` : "") +
     (effects ? `<div class="dialog-sec"><h4>Effects</h4>${effects}</div>` : "") +
     recipeHtml +
-    usedHtml
+    usedHtml +
+    jsonHtml
   );
 }
