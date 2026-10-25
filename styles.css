@@ -347,6 +347,14 @@ details.gear summary { cursor: pointer; font-size: 13.5px; font-weight: 600; col
 .dialog-tiles { display: flex; flex-wrap: wrap; gap: 6px; }
 .dialog-tiles .item-tile { width: 62px; flex: none; }
 
+/* ---------- active events ---------- */
+.events-list { display: grid; gap: 12px; }
+.event-row { display: grid; gap: 2px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.event-row:last-child { padding-bottom: 0; border-bottom: none; }
+.event-name { font-weight: 700; font-size: 15.5px; }
+.event-code { font-size: 12px; color: var(--ink-3); font-weight: 400; }
+.event-meta { font-size: 13.5px; color: var(--ink-2); }
+
 /* ---------- pi logs ---------- */
 .pi-state { font-size: 13px; color: var(--ink-2); margin-bottom: 10px; }
 .pi-state .mono { color: var(--ink); }

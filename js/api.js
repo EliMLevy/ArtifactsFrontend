@@ -35,6 +35,14 @@ const dataOf = (body) => (body && body.data) || {};
 /** GET / — server status, season, online counts. */
 export const getServerStatus = () => apiFetch("/").then(dataOf);
 
+/**
+ * GET /events/active — currently active events, public (no token needed).
+ * Returns the raw paged body; each item is an ActiveEventSchema
+ * (name, code, map, previous_map, duration in minutes, expiration, created_at).
+ */
+export const getActiveEvents = () =>
+  apiFetch("/events/active").then((b) => (b && b.data) || []);
+
 /** GET /my/details — account details for a token (resolves the username). */
 export const getAccountDetails = (token) => apiFetch("/my/details", token).then(dataOf);
 

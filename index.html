@@ -69,6 +69,17 @@
         <div class="banner" id="banner" role="alert"></div>
       </section>
 
+      <!-- Active events (public endpoint, no token needed) -->
+      <div class="section-head" id="eventsSectionHead">
+        <h2>Active Events</h2>
+        <span class="count" id="eventsCount"></span>
+        <span class="spacer"></span>
+        <button type="button" class="small ghost" id="eventsRefresh">Refresh</button>
+      </div>
+      <div class="panel events-panel">
+        <div class="events-list" id="eventsList">Loading…</div>
+      </div>
+
       <!-- Bank (token required) -->
       <div class="section-head hidden" id="bankSection">
         <h2>Bank</h2>

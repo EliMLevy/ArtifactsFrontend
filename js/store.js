@@ -23,6 +23,8 @@ export const state = {
   rates: null,
   /** true while auto-refresh is paused after a 429 */
   backingOff: false,
+  /** ActiveEventSchema[] — currently active events (public endpoint) */
+  activeEvents: [],
 };
 
 export function readStore(key) {
@@ -79,4 +81,5 @@ export function resetConnectionState() {
   state.bankFilter = { q: "", type: "" };
   state.rates = null;
   state.backingOff = false;
+  state.activeEvents = [];
 }
