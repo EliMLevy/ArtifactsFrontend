@@ -457,3 +457,30 @@ details.gear summary { cursor: pointer; font-size: 13.5px; font-weight: 600; col
 footer { margin-top: 34px; font-size: 12.5px; color: var(--ink-3); text-align: center; }
 footer a { color: var(--ink-2); }
 .hidden { display: none !important; }
+
+/* ---------- Characters Summary ---------- */
+.summary-panel { padding: 10px 12px; }
+.summary-grid {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+.summary-row {
+  display: flex; gap: 10px; align-items: flex-start; min-width: 0;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface-2);
+}
+.summary-cd { position: relative; width: 40px; height: 40px; flex: none; }
+.summary-cd svg { width: 40px; height: 40px; transform: rotate(-90deg); }
+.cd-ring-bg { fill: none; stroke: var(--line); stroke-width: 4; }
+.cd-ring-fg { fill: none; stroke: var(--cd); stroke-width: 4; stroke-linecap: round; }
+.summary-cd.ready .cd-ring-fg { stroke: var(--ready); }
+.summary-cd-label {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 10px;
+}
+.summary-body { min-width: 0; flex: 1; }
+.summary-name { font-weight: 600; font-size: 13.5px; line-height: 1.3; }
+.summary-name .mono { color: var(--ink-2); font-weight: 400; font-size: 12px; }
+.summary-etas { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 1px; font-size: 12.5px; color: var(--ink-2); }
+.sum-eta b { color: var(--ink); font-weight: 600; }
+.sum-none { color: var(--ink-3); }

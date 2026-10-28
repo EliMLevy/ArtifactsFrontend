@@ -13,6 +13,7 @@ import {
   stopAutoRefresh,
 } from "./loader.js";
 import { cardHTML, cooldownRemaining } from "./components/characterCard.js";
+import { summaryRowHTML, tickSummaryRow } from "./components/summarySection.js";
 import { itemDialogHTML } from "./components/bankSection.js";
 import { itemTileHTML } from "./components/itemTile.js";
 import { loadItemCatalog, itemByCode } from "./items.js";
@@ -52,6 +53,10 @@ const els = {
   bankGrid: document.getElementById("bankGrid"),
   bankCount: document.getElementById("bankCount"),
   bankInfo: document.getElementById("bankInfo"),
+  summarySection: document.getElementById("summarySection"),
+  summaryPanel: document.getElementById("summaryPanel"),
+  summaryGrid: document.getElementById("summaryGrid"),
+  summaryCount: document.getElementById("summaryCount"),
   itemDialog: document.getElementById("itemDialog"),
   itemDialogName: document.getElementById("itemDialogName"),
   itemDialogBody: document.getElementById("itemDialogBody"),
@@ -222,9 +227,17 @@ function logScrollPositions() {
   return pos;
 }
 
+function hideSummary() {
+  els.summarySection.classList.add("hidden");
+  els.summaryPanel.classList.add("hidden");
+  els.summaryGrid.innerHTML = "";
+  els.summaryCount.textContent = "";
+}
+
 function renderCharacters() {
   if (!state.characters.length) {
     els.charCount.textContent = "";
+    hideSummary();
     els.content.innerHTML =
       `<div class="empty"><h3>No characters on this account yet</h3>` +
       `<p>The API returned an empty roster for <strong>${esc(state.account)}</strong>. ` +
@@ -235,6 +248,12 @@ function renderCharacters() {
   const gearClosed = closedGearNames();
   const logScroll = logScrollPositions();
   els.charCount.textContent = `· ${state.characters.length} ${state.characters.length === 1 ? "character" : "characters"}`;
+  // Summary first: one dense row per character, rendered from the same
+  // state (roster + logs) as the cards below it.
+  els.summarySection.classList.remove("hidden");
+  els.summaryPanel.classList.remove("hidden");
+  els.summaryCount.textContent = `· ${state.characters.length} ${state.characters.length === 1 ? "character" : "characters"}`;
+  els.summaryGrid.innerHTML = state.characters.map((c, i) => summaryRowHTML(c, i)).join("");
   els.content.innerHTML =
     '<div class="grid">' + state.characters.map((c, i) => cardHTML(c, i)).join("") + "</div>";
   // Gear sections are open by default; re-collapse any the user closed,
@@ -256,6 +275,10 @@ function renderCharacters() {
 
 /* ---------- live cooldown ticker (1s) ---------- */
 function tickCooldowns() {
+  els.summaryGrid.querySelectorAll("[data-summary-row]").forEach((row) => {
+    const c = state.characters[Number(row.getAttribute("data-idx"))];
+    if (c) tickSummaryRow(row, c);
+  });
   els.content.querySelectorAll("[data-cd-box]").forEach((box) => {
     const card = box.closest(".card");
     if (!card) return;
@@ -354,6 +377,7 @@ async function connectAndLoad() {
     state.connected = false;
     const msg = friendlyError(err);
     showBanner(msg);
+    hideSummary();
     els.content.innerHTML = `<div class="empty"><h3>Couldn’t load characters</h3><p>${esc(msg)}</p></div>`;
     els.charCount.textContent = "";
     els.endpointNote.textContent = "";
@@ -547,6 +571,7 @@ els.clear.addEventListener("click", () => {
   els.refresh.disabled = true;
   els.ratesPill.classList.add("hidden");
   hideBankSection();
+  hideSummary();
   hideBanner();
   els.content.innerHTML =
     `<div class="empty"><h3>Token forgotten</h3>` +
