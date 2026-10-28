@@ -155,13 +155,17 @@ async function loadAchievements(account) {
     const pages = body && body.pages;
     if (data.length < ACH_PAGE_SIZE || (pages && page >= pages)) break;
   }
-  // Incomplete first (closest to done first), completed last by name.
+  // Incomplete first (closest to done first), completed last, most
+  // recently completed first (name as a tie-breaker).
   items.sort((a, b) => {
     const da = a.completed_at ? 1 : 0;
     const db = b.completed_at ? 1 : 0;
     if (da !== db) return da - db;
     if (!da) return overallProgress(b) - overallProgress(a);
-    return String(a.name).localeCompare(String(b.name));
+    return (
+      (Date.parse(b.completed_at) || 0) - (Date.parse(a.completed_at) || 0) ||
+      String(a.name).localeCompare(String(b.name))
+    );
   });
   all = items;
   const earned = all.reduce((s, a) => s + (a.completed_at ? a.points || 0 : 0), 0);
