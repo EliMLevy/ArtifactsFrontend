@@ -93,6 +93,7 @@ function achCardHTML(a) {
     `<article class="card ach-card${done ? " completed" : ""}">` +
     `<div class="ach-head"><h3 class="ach-name">${esc(a.name)}</h3>` +
     `<span class="ach-points mono">${num(a.points)} pts</span></div>` +
+    (a.code ? `<div class="ach-code mono">${esc(a.code)}</div>` : "") +
     (a.description ? `<p class="ach-desc">${esc(a.description)}</p>` : "") +
     (objs ? `<div class="ach-objs">${objs}</div>` : "") +
     rewardsHTML(a.rewards) +
