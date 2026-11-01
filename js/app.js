@@ -19,6 +19,7 @@ import { itemTileHTML } from "./components/itemTile.js";
 import { loadItemCatalog, itemByCode } from "./items.js";
 import { initPiSection } from "./piSection.js";
 import { initEventsSection } from "./components/eventsSection.js";
+import { initOfferingsSection } from "./components/offeringsSection.js";
 import { loadMapCatalog } from "./maps.js";
 import { esc, num, fmtClock, fmtTime, prettyCode } from "./utils.js";
 
@@ -53,6 +54,7 @@ const els = {
   bankGrid: document.getElementById("bankGrid"),
   bankCount: document.getElementById("bankCount"),
   bankInfo: document.getElementById("bankInfo"),
+  offeringsList: document.getElementById("offeringsList"),
   summarySection: document.getElementById("summarySection"),
   summaryPanel: document.getElementById("summaryPanel"),
   summaryGrid: document.getElementById("summaryGrid"),
@@ -521,6 +523,19 @@ els.bankGrid.addEventListener("keydown", (e) => {
     openItemDialog(tile.dataset.code);
   }
 });
+// Requirement tiles in the Seasonal Offerings section open the item dialog.
+els.offeringsList.addEventListener("click", (e) => {
+  const tile = e.target.closest(".item-tile");
+  if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
+});
+els.offeringsList.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" && e.key !== " ") return;
+  const tile = e.target.closest(".item-tile");
+  if (tile && tile.dataset.code) {
+    e.preventDefault();
+    openItemDialog(tile.dataset.code);
+  }
+});
 // Inventory tiles + equipped gear inside character cards open the item dialog.
 els.content.addEventListener("click", (e) => {
   const tile = e.target.closest(".inv-grid .item-tile, .gear-list .gear-item");
@@ -589,6 +604,7 @@ setInterval(tickCooldowns, 1000);
 loadServerStatus();
 initPiSection();
 initEventsSection();
+initOfferingsSection();
 // Local catalogs are niceties — the dashboard degrades gracefully without them.
 loadItemCatalog().catch(() => {});
 loadMapCatalog().catch(() => {});

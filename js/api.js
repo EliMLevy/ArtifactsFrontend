@@ -43,6 +43,16 @@ export const getServerStatus = () => apiFetch("/").then(dataOf);
 export const getActiveEvents = () =>
   apiFetch("/events/active").then((b) => (b && b.data) || []);
 
+/**
+ * GET /seasonal_offerings — today's daily offerings at the Seasonal Altar,
+ * public (no token needed). Returns the raw data object:
+ * { date, expires_at, skills, xp_reward_percent, offerings[] }.
+ * Each offering: { id, category, type, level_min, level_max,
+ *   requirement: { code, quantity },
+ *   favor: { target_type, target_code, xp_multiplier, drop_multiplier } }.
+ */
+export const getSeasonalOfferings = () => apiFetch("/seasonal_offerings").then(dataOf);
+
 /** GET /my/details — account details for a token (resolves the username). */
 export const getAccountDetails = (token) => apiFetch("/my/details", token).then(dataOf);
 

@@ -23,6 +23,15 @@ export function getMap(mapId) {
   return byId.get(mapId) || null;
 }
 
+/** First map whose content type matches, e.g. "seasonal_altar" — or null. */
+export function findMapByContentType(type) {
+  for (const m of byId.values()) {
+    const c = m && m.interactions && m.interactions.content;
+    if (c && c.type === type) return m;
+  }
+  return null;
+}
+
 /** { type, code } of the map's content, or null when the tile is empty. */
 export function contentOf(mapId) {
   const m = byId.get(mapId);

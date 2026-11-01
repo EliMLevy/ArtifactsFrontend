@@ -25,6 +25,8 @@ export const state = {
   backingOff: false,
   /** ActiveEventSchema[] — currently active events (public endpoint) */
   activeEvents: [],
+  /** Seasonal offerings data object | null (public endpoint) */
+  seasonalOfferings: null,
 };
 
 export function readStore(key) {
