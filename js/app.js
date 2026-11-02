@@ -1,5 +1,5 @@
 // App bootstrap: DOM wiring, rendering, cooldown ticker, init.
-import { TOKEN_KEY, ACCOUNT_KEY, LOGS_EVERY_N_TICKS, SLOW_EVERY_N_TICKS } from "./config.js";
+import { TOKEN_KEY, ACCOUNT_KEY, SLOW_EVERY_N_TICKS } from "./config.js";
 import { state, readStore, saveCredentials, clearCredentials, resetConnectionState } from "./store.js";
 import { getServerStatus } from "./api.js";
 import {
@@ -449,7 +449,7 @@ async function refreshData({ logs = false, slow = false } = {}) {
 
 function onAutoTick(tickCount) {
   refreshData({
-    logs: tickCount % LOGS_EVERY_N_TICKS === 0,
+    logs: true, // logs refresh together with character state, every tick
     slow: tickCount % SLOW_EVERY_N_TICKS === 0,
   });
 }
