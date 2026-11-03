@@ -142,6 +142,7 @@ els.encySubtypeTags.addEventListener("click", (e) => {
 
 /* ---------- dialogs (same drill-down as the dashboard) ---------- */
 function openItemDialog(code) {
+  if (els.monsterDialog.open) els.monsterDialog.close(); // never stack behind it
   const info = itemByCode.get(code);
   els.itemDialogName.textContent = (info && info.name) || prettyCode(code);
   els.itemDialogBody.innerHTML = itemDialogHTML(code);
@@ -149,6 +150,7 @@ function openItemDialog(code) {
 }
 
 function openMonsterDialog(code) {
+  if (els.itemDialog.open) els.itemDialog.close(); // never stack behind it
   const info = monsterByCode.get(code);
   els.monsterDialogName.textContent = (info && info.name) || prettyCode(code);
   els.monsterDialogBody.innerHTML = monsterDialogHTML(code);
