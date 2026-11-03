@@ -5,8 +5,6 @@ import { loadItemCatalog, itemByCode } from "./items.js";
 import { loadMonsterCatalog, monsterByCode } from "./monsters.js";
 import { itemDialogHTML } from "./components/bankSection.js";
 import { monsterDialogHTML } from "./components/monsterDialog.js";
-import { itemTileHTML } from "./components/itemTile.js";
-import { monsterTileHTML } from "./components/monsterTile.js";
 import { esc, num, prettyCode } from "./utils.js";
 
 const els = {
@@ -95,13 +93,19 @@ function renderKindTags() {
     .join("");
 }
 
-function tileHTML(e) {
-  const tile = e.kind === "monster" ? monsterTileHTML({ code: e.code }) : itemTileHTML({ code: e.code, quantity: 1 });
+/** Horizontal encyclopedia card: 30px icon left, name + level right.
+ * The whole card is the clickable outline (border encompasses icon + text). */
+function cardHTML(e) {
+  const imgPath = e.kind === "monster" ? "monsters" : "items";
   const lvl = e.level === Infinity ? "" : `Lv ${num(e.level)}`;
+  const title = lvl ? `${e.name} — ${lvl}` : e.name;
   return (
-    `<div class="ency-cell">` + tile +
-    `<div class="ency-cap"><span class="ency-name">${esc(e.name)}</span>` +
-    (lvl ? `<span class="mono">${esc(lvl)}</span>` : "") +
+    `<div class="ency-card" data-code="${esc(e.code)}" data-kind="${e.kind}" title="${esc(title)}" ` +
+    `role="button" tabindex="0" aria-label="${esc(title)} — view details">` +
+    `<img src="https://artifactsmmo.com/images/${imgPath}/${encodeURIComponent(e.code)}.png" ` +
+    `alt="" loading="lazy" onerror="this.remove()">` +
+    `<div class="ency-card-text"><div class="ency-card-name">${esc(e.name)}</div>` +
+    (lvl ? `<div class="mono ency-card-lvl">${esc(lvl)}</div>` : "") +
     `</div></div>`
   );
 }
@@ -125,7 +129,7 @@ function render() {
 
   els.encyCount.textContent = shown.length ? `· ${num(shown.length)} shown` : "";
   els.encyGrid.innerHTML = shown.length
-    ? shown.map(tileHTML).join("")
+    ? shown.map(cardHTML).join("")
     : `<div class="log-empty">Nothing matches these filters.</div>`;
 }
 
@@ -168,19 +172,18 @@ function openMonsterDialog(code) {
 }
 
 els.encyGrid.addEventListener("click", (e) => {
-  const cell = e.target.closest(".ency-cell");
-  const tile = cell ? cell.querySelector(".item-tile") : null;
-  if (!tile || !tile.dataset.code) return;
-  if (tile.classList.contains("monster-tile")) openMonsterDialog(tile.dataset.code);
-  else openItemDialog(tile.dataset.code);
+  const card = e.target.closest(".ency-card");
+  if (!card || !card.dataset.code) return;
+  if (card.dataset.kind === "monster") openMonsterDialog(card.dataset.code);
+  else openItemDialog(card.dataset.code);
 });
 els.encyGrid.addEventListener("keydown", (e) => {
   if (e.key !== "Enter" && e.key !== " ") return;
-  const tile = e.target.closest(".item-tile, .monster-tile");
-  if (tile && tile.dataset.code) {
+  const card = e.target.closest(".ency-card");
+  if (card && card.dataset.code) {
     e.preventDefault();
-    if (tile.classList.contains("monster-tile")) openMonsterDialog(tile.dataset.code);
-    else openItemDialog(tile.dataset.code);
+    if (card.dataset.kind === "monster") openMonsterDialog(card.dataset.code);
+    else openItemDialog(card.dataset.code);
   }
 });
 // Drill-down inside the dialogs.
