@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Encyclopedia — Artifacts</title>
+    <link rel="icon" href="https://artifactsmmo.com/images/monsters/chicken.png" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <nav class="site-nav" aria-label="Site">
+        <span class="nav-brand">⚔️ Artifacts</span>
+        <a href="./index.html" class="nav-link">Dashboard</a>
+        <a href="./achievements.html" class="nav-link">Achievements</a>
+        <a href="./leaderboard.html" class="nav-link">Leaderboard</a>
+        <a href="./encyclopedia.html" class="nav-link active" aria-current="page">Encyclopedia</a>
+      </nav>
+
+      <div class="section-head">
+        <h2>Encyclopedia</h2>
+        <span class="count" id="encyCount"></span>
+      </div>
+      <div class="panel ency-panel">
+        <div class="ency-filters">
+          <div class="type-tags" id="encyKindTags" role="group" aria-label="Show items, monsters, or both"></div>
+          <div class="ency-filter-group">
+            <span class="ency-filter-label">Type</span>
+            <div class="type-tags" id="encyTypeTags" role="group" aria-label="Filter by type"></div>
+          </div>
+          <div class="ency-filter-group">
+            <span class="ency-filter-label">Subtype</span>
+            <div class="type-tags" id="encySubtypeTags" role="group" aria-label="Filter by subtype"></div>
+          </div>
+        </div>
+        <div class="ency-grid" id="encyGrid"></div>
+      </div>
+    </div>
+
+    <dialog id="itemDialog" class="item-dialog" aria-labelledby="itemDialogName">
+      <div class="dialog-head">
+        <h3 id="itemDialogName">Item</h3>
+        <button type="button" class="small ghost" id="itemDialogClose" aria-label="Close dialog">✕</button>
+      </div>
+      <div class="dialog-body" id="itemDialogBody"></div>
+    </dialog>
+
+    <dialog id="monsterDialog" class="item-dialog" aria-labelledby="monsterDialogName">
+      <div class="dialog-head">
+        <h3 id="monsterDialogName">Monster</h3>
+        <button type="button" class="small ghost" id="monsterDialogClose" aria-label="Close dialog">✕</button>
+      </div>
+      <div class="dialog-body" id="monsterDialogBody"></div>
+    </dialog>
+
+    <script type="module" src="./js/encyclopedia.js"></script>
+  </body>
+</html>
