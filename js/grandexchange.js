@@ -1,6 +1,8 @@
 // Grand Exchange: public buy/sell order book, filtered by item code.
 // Partial codes ("copper" matches copper_bar and copper_ore) are expanded
-// against the local item catalog, then orders are fetched per code.
+// against the local item catalog, then filtered client-side from a cached
+// copy of the whole order book. The API is only hit on page load and when
+// the Refresh button is pressed — never while searching or toggling sides.
 import { API_BASE } from "./config.js";
 import { loadItemCatalog, itemByCode, usedIn } from "./items.js";
 import { itemDialogHTML } from "./components/bankSection.js";
@@ -11,6 +13,7 @@ const els = {
   geSearch: document.getElementById("geSearch"),
   geSearchClear: document.getElementById("geSearchClear"),
   geKindTags: document.getElementById("geKindTags"),
+  geRefresh: document.getElementById("geRefresh"),
   geNote: document.getElementById("geNote"),
   geList: document.getElementById("geList"),
   itemDialog: document.getElementById("itemDialog"),
@@ -20,10 +23,11 @@ const els = {
 };
 
 const filter = { q: "", type: "sell" };
-const MAX_CODES = 20; // cap catalog expansion to keep request count sane
 const PAGE_SIZE = 100;
 
-let seq = 0; // guards against out-of-order responses
+/** Cached order book: { sell: [...], buy: [...] }, fetched once per load/refresh. */
+const orderBook = { sell: null, buy: null, fetchedAt: null };
+let loading = false;
 
 function renderKindTags() {
   const kinds = [
@@ -71,15 +75,13 @@ function ingredientMatches(q) {
   return out;
 }
 
-async function fetchOrders(code, type) {
+/** Fetch every page of orders for one side. */
+async function fetchAllOrders(type) {
   const all = [];
   let page = 1;
   let pages = 1;
   do {
-    const url =
-      `${API_BASE}/grandexchange/orders?` +
-      (code ? `code=${encodeURIComponent(code)}&` : "") +
-      `type=${encodeURIComponent(type)}&size=${PAGE_SIZE}&page=${page}`;
+    const url = `${API_BASE}/grandexchange/orders?type=${encodeURIComponent(type)}&size=${PAGE_SIZE}&page=${page}`;
     const res = await fetch(url, { headers: { Accept: "application/json" } });
     if (!res.ok) throw new Error(`GE orders failed (HTTP ${res.status})`);
     const body = await res.json();
@@ -88,6 +90,26 @@ async function fetchOrders(code, type) {
     page += 1;
   } while (page <= pages);
   return all;
+}
+
+/** Refresh the cached order book (both sides) from the API. */
+async function refreshOrderBook() {
+  if (loading) return;
+  loading = true;
+  els.geNote.textContent = "Loading orders…";
+  els.geList.innerHTML = "";
+  try {
+    // Sequential, one request per side — this is the only place the API is hit.
+    orderBook.sell = await fetchAllOrders("sell");
+    orderBook.buy = await fetchAllOrders("buy");
+    orderBook.fetchedAt = Date.now();
+  } catch {
+    els.geNote.textContent = "";
+    els.geList.innerHTML = `<div class="log-empty">Could not load Grand Exchange orders (rate limited?). Try Refresh in a moment.</div>`;
+  } finally {
+    loading = false;
+  }
+  render();
 }
 
 /** "3h 12m" / "2d" style age from an ISO timestamp. */
@@ -129,90 +151,70 @@ function orderRowHTML(o, viaIngredients) {
   );
 }
 
-async function search() {
-  const mySeq = ++seq;
-  const q = filter.q;
-  if (!q.trim()) {
-    // Empty search: the whole order book for this side, ascending by price.
-    els.geNote.textContent = "Loading all orders…";
-    els.geList.innerHTML = "";
-    try {
-      const orders = await fetchOrders(null, filter.type);
-      if (mySeq !== seq) return;
-      orders.sort((a, b) => a.price - b.price || a.quantity - b.quantity);
-      els.geCount.textContent = orders.length ? `· ${num(orders.length)} orders` : "";
-      els.geNote.textContent = orders.length ? "All orders, cheapest first." : "";
-      els.geList.innerHTML = orders.length
-        ? orders.map(orderRowHTML).join("")
-        : `<div class="log-empty">No ${filter.type} orders right now.</div>`;
-    } catch {
-      if (mySeq !== seq) return;
-      els.geNote.textContent = "";
-      els.geList.innerHTML = `<div class="log-empty">Could not load Grand Exchange orders.</div>`;
-    }
-    return;
-  }
-  const codes = matchingCodes(q);
-  // Craftable items reached via a matching ingredient (not direct matches).
-  const viaMap = ingredientMatches(q);
-  for (const c of codes) viaMap.delete(c);
-  const viaCodes = [...viaMap.keys()].sort();
-  const allCodes = codes.concat(viaCodes);
-  if (!allCodes.length) {
+/** Render from the cached order book — no API calls here. */
+function render() {
+  const book = orderBook[filter.type];
+  const q = filter.q.trim();
+  if (!book) {
     els.geCount.textContent = "";
     els.geNote.textContent = "";
-    els.geList.innerHTML = `<div class="log-empty">No items match "${esc(q)}".</div>`;
+    els.geList.innerHTML = "";
     return;
   }
-  const capped = allCodes.length > MAX_CODES;
-  const useCodes = capped ? allCodes.slice(0, MAX_CODES) : allCodes;
-  els.geNote.textContent = `Searching ${useCodes.length} item${useCodes.length === 1 ? "" : "s"}…`;
-  els.geList.innerHTML = "";
-
-  try {
-    const results = await Promise.all(useCodes.map((c) => fetchOrders(c, filter.type)));
-    if (mySeq !== seq) return; // a newer search superseded this one
-    const orders = results.flat();
-    // Sell orders: cheapest first. Buy orders: highest bid first.
-    orders.sort((a, b) =>
-      filter.type === "sell" ? a.price - b.price || a.quantity - b.quantity : b.price - a.price || a.quantity - b.quantity
-    );
-    els.geCount.textContent = orders.length ? `· ${num(orders.length)} orders` : "";
-    els.geNote.textContent =
-      (capped ? `Showing matches for the first ${MAX_CODES} of ${allCodes.length} items — narrow your search for the rest.` : "") +
-      (allCodes.length && !orders.length ? ` No ${filter.type} orders right now.` : "");
-    els.geList.innerHTML = orders.length
-      ? orders.map((o) => orderRowHTML(o, viaMap.get(o.code))).join("")
-      : `<div class="log-empty">No ${filter.type} orders right now.</div>`;
-  } catch {
-    if (mySeq !== seq) return;
-    els.geNote.textContent = "";
-    els.geList.innerHTML = `<div class="log-empty">Could not load Grand Exchange orders.</div>`;
+  let orders = book;
+  let viaMap = null;
+  if (q) {
+    const codes = new Set(matchingCodes(q));
+    // Craftable items reached via a matching ingredient (not direct matches).
+    viaMap = ingredientMatches(q);
+    for (const c of codes) viaMap.delete(c);
+    const wanted = new Set([...codes, ...viaMap.keys()]);
+    orders = book.filter((o) => wanted.has(o.code));
   }
+  // Sell orders: cheapest first. Buy orders: highest bid first.
+  orders = orders.slice().sort((a, b) =>
+    filter.type === "sell" ? a.price - b.price || a.quantity - b.quantity : b.price - a.price || a.quantity - b.quantity
+  );
+  els.geCount.textContent = orders.length ? `· ${num(orders.length)} orders` : "";
+  els.geNote.textContent = q
+    ? ""
+    : orderBook.fetchedAt
+      ? `All orders, cheapest first · updated ${updatedLabel()}`
+      : "";
+  els.geList.innerHTML = orders.length
+    ? orders.map((o) => orderRowHTML(o, viaMap ? viaMap.get(o.code) : null)).join("")
+    : `<div class="log-empty">${q ? `No items match "${esc(q)}".` : `No ${filter.type} orders right now.`}</div>`;
 }
 
-let debounce = null;
+/** "2m ago" style label for the last refresh. */
+function updatedLabel() {
+  const s = (Date.now() - orderBook.fetchedAt) / 1000;
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  return `${Math.floor(s / 3600)}h ago`;
+}
+
+/* ---------- controls (all client-side; the API is only hit on load/refresh) ---------- */
 els.geSearch.addEventListener("input", () => {
   filter.q = els.geSearch.value;
   els.geSearchClear.classList.toggle("hidden", !filter.q);
-  clearTimeout(debounce);
-  debounce = setTimeout(search, 350);
+  render();
 });
 els.geSearchClear.addEventListener("click", () => {
   els.geSearch.value = "";
   filter.q = "";
   els.geSearchClear.classList.add("hidden");
-  search();
+  render();
   els.geSearch.focus();
 });
-
 els.geKindTags.addEventListener("click", (e) => {
   const tag = e.target.closest(".typetag");
   if (!tag) return;
   filter.type = tag.dataset.type;
   renderKindTags();
-  search();
+  render(); // the other side is already cached — no API call
 });
+els.geRefresh.addEventListener("click", refreshOrderBook);
 
 /* ---------- item dialog ---------- */
 function openItemDialog(code) {
@@ -234,10 +236,10 @@ els.itemDialog.addEventListener("click", (e) => {
   if (e.target === els.itemDialog) els.itemDialog.close();
 });
 
-/* ---------- boot ---------- */
+/* ---------- boot: load the catalog, then the order book once ---------- */
 renderKindTags();
 loadItemCatalog()
-  .then(() => search())
+  .then(() => refreshOrderBook())
   .catch(() => {
     els.geList.innerHTML = `<div class="log-empty">Could not load the item catalog.</div>`;
   });
