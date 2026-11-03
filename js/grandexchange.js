@@ -2,7 +2,7 @@
 // Partial codes ("copper" matches copper_bar and copper_ore) are expanded
 // against the local item catalog, then orders are fetched per code.
 import { API_BASE } from "./config.js";
-import { loadItemCatalog, itemByCode } from "./items.js";
+import { loadItemCatalog, itemByCode, usedIn } from "./items.js";
 import { itemDialogHTML } from "./components/bankSection.js";
 import { esc, num, prettyCode } from "./utils.js";
 
@@ -52,6 +52,25 @@ function matchingCodes(q) {
   return out.sort();
 }
 
+/**
+ * Craftable items whose recipe includes an ingredient matching the query:
+ * { craftableCode: [{ ingCode, qty }] }. "yellow" matches sticky_sword
+ * because its recipe needs yellow_slimeball.
+ */
+function ingredientMatches(q) {
+  const needle = q.trim().toLowerCase();
+  const out = new Map();
+  if (!needle) return out;
+  for (const [code, it] of itemByCode) {
+    if (!(code.toLowerCase().includes(needle) || (it.name && it.name.toLowerCase().includes(needle)))) continue;
+    for (const recipe of usedIn.get(code) || []) {
+      if (!out.has(recipe.code)) out.set(recipe.code, []);
+      out.get(recipe.code).push({ ingCode: code, qty: recipe.quantity });
+    }
+  }
+  return out;
+}
+
 async function fetchOrders(code, type) {
   const all = [];
   let page = 1;
@@ -80,16 +99,27 @@ function ageLabel(iso) {
   return `${Math.floor(s / 86400)}d`;
 }
 
-function orderRowHTML(o) {
+function orderRowHTML(o, viaIngredients) {
   const info = itemByCode.get(o.code);
   const name = (info && info.name) || prettyCode(o.code);
   const total = typeof o.quantity === "number" && typeof o.price === "number" ? o.quantity * o.price : null;
+  // Subtitle for ingredient matches: how many of the searched ingredient
+  // each craft needs, e.g. "3 × Yellow Slimeball".
+  const sub =
+    viaIngredients && viaIngredients.length
+      ? `<div class="ge-sub">${viaIngredients
+          .map(
+            ({ ingCode, qty }) =>
+              `${num(qty)} × ${esc((itemByCode.get(ingCode) && itemByCode.get(ingCode).name) || prettyCode(ingCode))}`
+          )
+          .join(" · ")}</div>`
+      : "";
   return (
     `<div class="ge-row">` +
     `<button type="button" class="ge-item item-tile" data-code="${esc(o.code)}" title="${esc(name)} — view details">` +
     `<img src="https://artifactsmmo.com/images/items/${encodeURIComponent(o.code)}.png" ` +
     `alt="" loading="lazy" onerror="this.remove()"></button>` +
-    `<div class="ge-name">${esc(name)}</div>` +
+    `<div class="ge-name">${esc(name)}${sub}</div>` +
     `<div class="ge-qty mono">×${num(o.quantity)}</div>` +
     `<div class="ge-price mono">${num(o.price)} <span class="ge-per">each</span></div>` +
     (total != null ? `<div class="ge-total mono">${num(total)} <span class="ge-per">total</span></div>` : "") +
@@ -123,14 +153,19 @@ async function search() {
     return;
   }
   const codes = matchingCodes(q);
-  if (!codes.length) {
+  // Craftable items reached via a matching ingredient (not direct matches).
+  const viaMap = ingredientMatches(q);
+  for (const c of codes) viaMap.delete(c);
+  const viaCodes = [...viaMap.keys()].sort();
+  const allCodes = codes.concat(viaCodes);
+  if (!allCodes.length) {
     els.geCount.textContent = "";
     els.geNote.textContent = "";
     els.geList.innerHTML = `<div class="log-empty">No items match "${esc(q)}".</div>`;
     return;
   }
-  const capped = codes.length > MAX_CODES;
-  const useCodes = capped ? codes.slice(0, MAX_CODES) : codes;
+  const capped = allCodes.length > MAX_CODES;
+  const useCodes = capped ? allCodes.slice(0, MAX_CODES) : allCodes;
   els.geNote.textContent = `Searching ${useCodes.length} item${useCodes.length === 1 ? "" : "s"}…`;
   els.geList.innerHTML = "";
 
@@ -144,10 +179,10 @@ async function search() {
     );
     els.geCount.textContent = orders.length ? `· ${num(orders.length)} orders` : "";
     els.geNote.textContent =
-      (capped ? `Showing matches for the first ${MAX_CODES} of ${codes.length} items — narrow your search for the rest.` : "") +
-      (codes.length && !orders.length ? ` No ${filter.type} orders right now.` : "");
+      (capped ? `Showing matches for the first ${MAX_CODES} of ${allCodes.length} items — narrow your search for the rest.` : "") +
+      (allCodes.length && !orders.length ? ` No ${filter.type} orders right now.` : "");
     els.geList.innerHTML = orders.length
-      ? orders.map(orderRowHTML).join("")
+      ? orders.map((o) => orderRowHTML(o, viaMap.get(o.code))).join("")
       : `<div class="log-empty">No ${filter.type} orders right now.</div>`;
   } catch {
     if (mySeq !== seq) return;
