@@ -542,3 +542,26 @@ footer a { color: var(--ink-2); }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .ency-card-lvl { font-size: 11px; color: var(--ink-2); }
+
+/* ---------- grand exchange ---------- */
+.ge-panel { padding: 12px 14px; }
+.ge-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+.ge-search { flex: 1; min-width: 220px; }
+.ge-controls .type-tags { margin-bottom: 0; }
+.ge-note { font-size: 12.5px; color: var(--ink-2); margin-bottom: 8px; }
+.ge-list { display: flex; flex-direction: column; }
+.ge-row {
+  display: grid; gap: 10px; align-items: center;
+  grid-template-columns: 40px minmax(120px, 1fr) 64px 110px 110px minmax(80px, 1fr) 44px;
+  padding: 6px 4px; border-top: 1px solid var(--line); font-size: 13px;
+}
+.ge-row:first-child { border-top: none; }
+.ge-row .item-tile { width: 36px; padding: 3px 2px; background: none; border: none; }
+.ge-row .item-tile:hover { border: none; background: var(--surface-2); }
+.ge-row .item-tile img { width: 30px; height: 30px; }
+.ge-name { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ge-qty { color: var(--ink-2); }
+.ge-price, .ge-total { text-align: right; }
+.ge-per { font-size: 10.5px; color: var(--ink-2); }
+.ge-seller { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink-2); }
+.ge-age { text-align: right; color: var(--ink-2); }

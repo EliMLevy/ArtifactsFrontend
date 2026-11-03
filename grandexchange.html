@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Grand Exchange — Artifacts</title>
+    <link rel="icon" href="https://artifactsmmo.com/images/monsters/chicken.png" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <nav class="site-nav" aria-label="Site">
+        <span class="nav-brand">⚔️ Artifacts</span>
+        <a href="./index.html" class="nav-link">Dashboard</a>
+        <a href="./achievements.html" class="nav-link">Achievements</a>
+        <a href="./leaderboard.html" class="nav-link">Leaderboard</a>
+        <a href="./encyclopedia.html" class="nav-link">Encyclopedia</a>
+        <a href="./grandexchange.html" class="nav-link active" aria-current="page">Grand Exchange</a>
+      </nav>
+
+      <div class="section-head">
+        <h2>Grand Exchange</h2>
+        <span class="count" id="geCount"></span>
+      </div>
+      <div class="panel ge-panel">
+        <div class="ge-controls">
+          <div class="search-wrap ge-search">
+            <input type="text" id="geSearch" autocomplete="off" spellcheck="false"
+                   placeholder="Search by item code or name… e.g. copper" aria-label="Search orders by item" />
+            <button type="button" class="search-clear hidden" id="geSearchClear" aria-label="Clear search">✕</button>
+          </div>
+          <div class="type-tags ge-kind" id="geKindTags" role="group" aria-label="Buy or sell orders"></div>
+        </div>
+        <div class="ge-note" id="geNote"></div>
+        <div class="ge-list" id="geList"></div>
+      </div>
+    </div>
+
+    <dialog id="itemDialog" class="item-dialog" aria-labelledby="itemDialogName">
+      <div class="dialog-head">
+        <h3 id="itemDialogName">Item</h3>
+        <button type="button" class="small ghost" id="itemDialogClose" aria-label="Close dialog">✕</button>
+      </div>
+      <div class="dialog-body" id="itemDialogBody"></div>
+    </dialog>
+
+    <script type="module" src="./js/grandexchange.js"></script>
+  </body>
+</html>
