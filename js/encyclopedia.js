@@ -96,18 +96,28 @@ function renderKindTags() {
 }
 
 function tileHTML(e) {
-  return e.kind === "monster" ? monsterTileHTML({ code: e.code }) : itemTileHTML({ code: e.code, quantity: 1 });
+  const tile = e.kind === "monster" ? monsterTileHTML({ code: e.code }) : itemTileHTML({ code: e.code, quantity: 1 });
+  const lvl = e.level === Infinity ? "" : `Lv ${num(e.level)}`;
+  return (
+    `<div class="ency-cell">` + tile +
+    `<div class="ency-cap"><span class="ency-name">${esc(e.name)}</span>` +
+    (lvl ? `<span class="mono">${esc(lvl)}</span>` : "") +
+    `</div></div>`
+  );
 }
 
 function render() {
   const pool = kindPool();
   // Drop selections that no longer exist in the displayed pool.
   if (filter.type && !pool.some((e) => e.type === filter.type)) filter.type = "";
-  if (filter.subtype && !pool.some((e) => e.subtype === filter.subtype)) filter.subtype = "";
+  // Subtype options follow the selected type: only subtypes that exist on
+  // the type-filtered entries are shown.
+  const subtypePool = filter.type ? pool.filter((e) => e.type === filter.type) : pool;
+  if (filter.subtype && !subtypePool.some((e) => e.subtype === filter.subtype)) filter.subtype = "";
 
   renderKindTags();
   renderTags(els.encyTypeTags, countsOf(pool, "type"), filter.type);
-  renderTags(els.encySubtypeTags, countsOf(pool, "subtype"), filter.subtype);
+  renderTags(els.encySubtypeTags, countsOf(subtypePool, "subtype"), filter.subtype);
 
   const shown = pool
     .filter((e) => (!filter.type || e.type === filter.type) && (!filter.subtype || e.subtype === filter.subtype))
@@ -158,18 +168,18 @@ function openMonsterDialog(code) {
 }
 
 els.encyGrid.addEventListener("click", (e) => {
-  const mt = e.target.closest(".monster-tile");
-  if (mt && mt.dataset.code) return openMonsterDialog(mt.dataset.code);
-  const tile = e.target.closest(".item-tile");
-  if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
+  const cell = e.target.closest(".ency-cell");
+  const tile = cell ? cell.querySelector(".item-tile") : null;
+  if (!tile || !tile.dataset.code) return;
+  if (tile.classList.contains("monster-tile")) openMonsterDialog(tile.dataset.code);
+  else openItemDialog(tile.dataset.code);
 });
 els.encyGrid.addEventListener("keydown", (e) => {
   if (e.key !== "Enter" && e.key !== " ") return;
-  const mt = e.target.closest(".monster-tile");
-  const tile = mt || e.target.closest(".item-tile");
+  const tile = e.target.closest(".item-tile, .monster-tile");
   if (tile && tile.dataset.code) {
     e.preventDefault();
-    if (mt) openMonsterDialog(tile.dataset.code);
+    if (tile.classList.contains("monster-tile")) openMonsterDialog(tile.dataset.code);
     else openItemDialog(tile.dataset.code);
   }
 });
