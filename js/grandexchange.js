@@ -58,8 +58,9 @@ async function fetchOrders(code, type) {
   let pages = 1;
   do {
     const url =
-      `${API_BASE}/grandexchange/orders?code=${encodeURIComponent(code)}` +
-      `&type=${encodeURIComponent(type)}&size=${PAGE_SIZE}&page=${page}`;
+      `${API_BASE}/grandexchange/orders?` +
+      (code ? `code=${encodeURIComponent(code)}&` : "") +
+      `type=${encodeURIComponent(type)}&size=${PAGE_SIZE}&page=${page}`;
     const res = await fetch(url, { headers: { Accept: "application/json" } });
     if (!res.ok) throw new Error(`GE orders failed (HTTP ${res.status})`);
     const body = await res.json();
@@ -101,13 +102,27 @@ function orderRowHTML(o) {
 async function search() {
   const mySeq = ++seq;
   const q = filter.q;
-  const codes = matchingCodes(q);
   if (!q.trim()) {
-    els.geCount.textContent = "";
-    els.geNote.textContent = "";
-    els.geList.innerHTML = `<div class="log-empty">Enter an item code above to search the Grand Exchange.</div>`;
+    // Empty search: the whole order book for this side, ascending by price.
+    els.geNote.textContent = "Loading all orders…";
+    els.geList.innerHTML = "";
+    try {
+      const orders = await fetchOrders(null, filter.type);
+      if (mySeq !== seq) return;
+      orders.sort((a, b) => a.price - b.price || a.quantity - b.quantity);
+      els.geCount.textContent = orders.length ? `· ${num(orders.length)} orders` : "";
+      els.geNote.textContent = orders.length ? "All orders, cheapest first." : "";
+      els.geList.innerHTML = orders.length
+        ? orders.map(orderRowHTML).join("")
+        : `<div class="log-empty">No ${filter.type} orders right now.</div>`;
+    } catch {
+      if (mySeq !== seq) return;
+      els.geNote.textContent = "";
+      els.geList.innerHTML = `<div class="log-empty">Could not load Grand Exchange orders.</div>`;
+    }
     return;
   }
+  const codes = matchingCodes(q);
   if (!codes.length) {
     els.geCount.textContent = "";
     els.geNote.textContent = "";
