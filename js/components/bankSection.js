@@ -1,6 +1,8 @@
 // Item detail dialog content (pure HTML; tile clicks are wired in app.js).
 import { itemByCode, usedIn } from "../items.js";
+import { droppedBy } from "../monsters.js";
 import { itemTileHTML } from "./itemTile.js";
+import { monsterTileHTML } from "./monsterTile.js";
 import { esc, num, prettyCode } from "../utils.js";
 
 /** Full detail HTML for the item dialog, from the cached catalog entry. */
@@ -47,6 +49,14 @@ export function itemDialogHTML(code) {
       `</div></div>`
     : "";
 
+  // Reverse lookup: monsters that drop this item (click a monster for details).
+  const droppers = droppedBy.get(code) || [];
+  const droppedHtml = droppers.length
+    ? `<div class="dialog-sec"><h4>Dropped by</h4><div class="dialog-tiles">` +
+      droppers.map((d) => monsterTileHTML({ code: d.code })).join("") +
+      `</div></div>`
+    : "";
+
   // The full catalog object, collapsed until the user asks for it.
   const jsonHtml = info
     ? `<details class="dialog-sec json-sec"><summary>Raw JSON</summary>` +
@@ -65,6 +75,7 @@ export function itemDialogHTML(code) {
     (effects ? `<div class="dialog-sec"><h4>Effects</h4>${effects}</div>` : "") +
     recipeHtml +
     usedHtml +
+    droppedHtml +
     jsonHtml
   );
 }

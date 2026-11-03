@@ -17,6 +17,8 @@ import { summaryRowHTML, tickSummaryRow } from "./components/summarySection.js";
 import { itemDialogHTML } from "./components/bankSection.js";
 import { itemTileHTML } from "./components/itemTile.js";
 import { loadItemCatalog, itemByCode } from "./items.js";
+import { loadMonsterCatalog, monsterByCode } from "./monsters.js";
+import { monsterDialogHTML } from "./components/monsterDialog.js";
 import { initPiSection } from "./piSection.js";
 import { initEventsSection } from "./components/eventsSection.js";
 import { initOfferingsSection } from "./components/offeringsSection.js";
@@ -63,6 +65,10 @@ const els = {
   itemDialogName: document.getElementById("itemDialogName"),
   itemDialogBody: document.getElementById("itemDialogBody"),
   itemDialogClose: document.getElementById("itemDialogClose"),
+  monsterDialog: document.getElementById("monsterDialog"),
+  monsterDialogName: document.getElementById("monsterDialogName"),
+  monsterDialogBody: document.getElementById("monsterDialogBody"),
+  monsterDialogClose: document.getElementById("monsterDialogClose"),
 };
 
 /* ---------- banner ---------- */
@@ -553,9 +559,41 @@ els.itemDialogClose.addEventListener("click", () => els.itemDialog.close());
 els.itemDialog.addEventListener("click", (e) => {
   if (e.target === els.itemDialog) els.itemDialog.close();
 });
+// Drop tiles inside the monster dialog drill back into the item dialog.
+els.monsterDialogBody.addEventListener("click", (e) => {
+  const tile = e.target.closest(".item-tile");
+  if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
+});
+els.monsterDialogClose.addEventListener("click", () => els.monsterDialog.close());
+els.monsterDialog.addEventListener("click", (e) => {
+  if (e.target === els.monsterDialog) els.monsterDialog.close();
+});
+/* ---------- monster detail dialog ---------- */
+function openMonsterDialog(code) {
+  const info = monsterByCode.get(code);
+  els.monsterDialogName.textContent = (info && info.name) || prettyCode(code);
+  els.monsterDialogBody.innerHTML = monsterDialogHTML(code);
+  if (typeof els.monsterDialog.showModal === "function") els.monsterDialog.showModal();
+}
+// Monster tiles inside the item dialog (Dropped by) open the monster dialog.
+function wireMonsterTiles(root) {
+  root.addEventListener("click", (e) => {
+    const tile = e.target.closest(".monster-tile");
+    if (tile && tile.dataset.code) openMonsterDialog(tile.dataset.code);
+  });
+  root.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const tile = e.target.closest(".monster-tile");
+    if (tile && tile.dataset.code) {
+      e.preventDefault();
+      openMonsterDialog(tile.dataset.code);
+    }
+  });
+}
+wireMonsterTiles(els.itemDialogBody);
 // Tiles inside the dialog (recipe ingredients / used-in items) drill down.
 els.itemDialogBody.addEventListener("click", (e) => {
-  const tile = e.target.closest(".item-tile");
+  const tile = e.target.closest(".item-tile:not(.monster-tile)");
   if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
 });
 els.token.addEventListener("keydown", (e) => {
@@ -607,6 +645,7 @@ initEventsSection();
 initOfferingsSection();
 // Local catalogs are niceties — the dashboard degrades gracefully without them.
 loadItemCatalog().catch(() => {});
+loadMonsterCatalog().catch(() => {});
 loadMapCatalog().catch(() => {});
 const savedToken = readStore(TOKEN_KEY);
 const savedAccount = readStore(ACCOUNT_KEY);
