@@ -6,7 +6,7 @@ import { esc, prettyCode } from "../utils.js";
 export function npcTileHTML(entry) {
   const info = npcByCode.get(entry.code);
   const name = (info && info.name) || prettyCode(entry.code);
-  const title = info && info.type ? `${name} — ${prettyCode(info.type)}` : name;
+  const title = entry.title || (info && info.type ? `${name} — ${prettyCode(info.type)}` : name);
   return (
     `<div class="item-tile npc-tile" data-code="${esc(entry.code)}" title="${esc(title)}" ` +
     `role="button" tabindex="0" aria-label="${esc(title)} — view details">` +

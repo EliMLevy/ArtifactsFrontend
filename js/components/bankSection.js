@@ -2,11 +2,12 @@
 import { itemByCode, usedIn } from "../items.js";
 import { droppedBy } from "../monsters.js";
 import { droppedByResource } from "../resources.js";
-import { itemTrades } from "../npcs.js";
+import { itemTrades, npcByCode } from "../npcs.js";
 import { itemTileHTML } from "./itemTile.js";
 import { monsterTileHTML } from "./monsterTile.js";
 import { resourceTileHTML } from "./resourceTile.js";
 import { npcTileHTML } from "./npcTile.js";
+import { currencyName } from "./npcDialog.js";
 import { esc, num, prettyCode } from "../utils.js";
 
 /** Full detail HTML for the item dialog, from the cached catalog entry. */
@@ -70,17 +71,23 @@ export function itemDialogHTML(code) {
     : "";
 
   // Reverse lookup: NPCs that trade this item (click an NPC for details).
+  // Tile tooltips show the deal, e.g. "Tailor — sells for 3 × Wool".
   const trades = itemTrades.get(code) || [];
+  const npcDealTitle = (npcCode, verb, t) => {
+    const n = npcByCode.get(npcCode);
+    const npcName = (n && n.name) || prettyCode(npcCode);
+    return `${npcName} — ${verb} for ${num(t.buy_price ?? t.sell_price)} × ${currencyName(t.currency)}`;
+  };
   const sellsToYou = trades.filter((t) => t.buy_price != null); // NPC sells the item
   const buysFromYou = trades.filter((t) => t.sell_price != null); // NPC buys the item
   const sellsHtml = sellsToYou.length
     ? `<div class="dialog-sec"><h4>Sold by NPCs</h4><div class="dialog-tiles">` +
-      sellsToYou.map((t) => npcTileHTML({ code: t.npc })).join("") +
+      sellsToYou.map((t) => npcTileHTML({ code: t.npc, title: npcDealTitle(t.npc, "sells", t) })).join("") +
       `</div></div>`
     : "";
   const buysHtml = buysFromYou.length
     ? `<div class="dialog-sec"><h4>Bought by NPCs</h4><div class="dialog-tiles">` +
-      buysFromYou.map((t) => npcTileHTML({ code: t.npc })).join("") +
+      buysFromYou.map((t) => npcTileHTML({ code: t.npc, title: npcDealTitle(t.npc, "buys", t) })).join("") +
       `</div></div>`
     : "";
 

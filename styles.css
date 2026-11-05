@@ -566,3 +566,5 @@ footer a { color: var(--ink-2); }
 .ge-seller { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink-2); }
 .ge-age { text-align: right; color: var(--ink-2); }
 .ge-sub { font-size: 11px; color: var(--ink-2); margin-top: 1px; }
+.cur-icon { width: 11px; height: 11px; vertical-align: -1px; }
+.cur-gold { font-size: 11px; }

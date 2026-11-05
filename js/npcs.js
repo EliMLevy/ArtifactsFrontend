@@ -5,9 +5,10 @@ let loaded = false;
 export const npcByCode = new Map();
 
 /**
- * Reverse trade index: item code -> [{ npc, buy_price, sell_price }].
+ * Reverse trade index: item code -> [{ npc, currency, buy_price, sell_price }].
  * buy_price: what the player pays the NPC (NPC sells the item).
  * sell_price: what the NPC pays the player (NPC buys the item).
+ * Prices are in units of `currency` (an item code, or "gold").
  */
 export const itemTrades = new Map();
 
@@ -23,7 +24,7 @@ export async function loadNpcCatalog() {
     for (const t of n.items || []) {
       if (!t || !t.code) continue;
       if (!itemTrades.has(t.code)) itemTrades.set(t.code, []);
-      itemTrades.get(t.code).push({ npc: n.code, buy_price: t.buy_price, sell_price: t.sell_price });
+      itemTrades.get(t.code).push({ npc: n.code, currency: t.currency, buy_price: t.buy_price, sell_price: t.sell_price });
     }
   }
   loaded = true;
