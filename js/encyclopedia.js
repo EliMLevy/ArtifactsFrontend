@@ -1,10 +1,14 @@
-// Encyclopedia: every item and monster, sorted by level then name.
+// Encyclopedia: every item, monster, resource and NPC, sorted by level then name.
 // Kind/type/subtype filters; type and subtype options are populated from
 // the entries currently displayed (before type/subtype selection).
 import { loadItemCatalog, itemByCode } from "./items.js";
 import { loadMonsterCatalog, monsterByCode } from "./monsters.js";
+import { loadResourceCatalog, resourceByCode } from "./resources.js";
+import { loadNpcCatalog, npcByCode } from "./npcs.js";
 import { itemDialogHTML } from "./components/bankSection.js";
 import { monsterDialogHTML } from "./components/monsterDialog.js";
+import { resourceDialogHTML } from "./components/resourceDialog.js";
+import { npcDialogHTML } from "./components/npcDialog.js";
 import { esc, num, prettyCode } from "./utils.js";
 
 const els = {
@@ -21,6 +25,14 @@ const els = {
   monsterDialogName: document.getElementById("monsterDialogName"),
   monsterDialogBody: document.getElementById("monsterDialogBody"),
   monsterDialogClose: document.getElementById("monsterDialogClose"),
+  resourceDialog: document.getElementById("resourceDialog"),
+  resourceDialogName: document.getElementById("resourceDialogName"),
+  resourceDialogBody: document.getElementById("resourceDialogBody"),
+  resourceDialogClose: document.getElementById("resourceDialogClose"),
+  npcDialog: document.getElementById("npcDialog"),
+  npcDialogName: document.getElementById("npcDialogName"),
+  npcDialogBody: document.getElementById("npcDialogBody"),
+  npcDialogClose: document.getElementById("npcDialogClose"),
 };
 
 const filter = { kind: "all", type: "", subtype: "" };
@@ -45,6 +57,26 @@ function buildEntries() {
       name: m.name || prettyCode(m.code),
       level: typeof m.level === "number" ? m.level : Infinity,
       type: m.type || "",
+      subtype: "",
+    });
+  }
+  for (const r of resourceByCode.values()) {
+    out.push({
+      kind: "resource",
+      code: r.code,
+      name: r.name || prettyCode(r.code),
+      level: typeof r.level === "number" ? r.level : Infinity,
+      type: r.skill || "",
+      subtype: "",
+    });
+  }
+  for (const n of npcByCode.values()) {
+    out.push({
+      kind: "npc",
+      code: n.code,
+      name: n.name || prettyCode(n.code),
+      level: Infinity,
+      type: n.type || "",
       subtype: "",
     });
   }
@@ -83,6 +115,8 @@ function renderKindTags() {
     ["all", "All", entries.length],
     ["item", "Items", entries.filter((e) => e.kind === "item").length],
     ["monster", "Monsters", entries.filter((e) => e.kind === "monster").length],
+    ["resource", "Resources", entries.filter((e) => e.kind === "resource").length],
+    ["npc", "NPCs", entries.filter((e) => e.kind === "npc").length],
   ];
   els.encyKindTags.innerHTML = kinds
     .map(
@@ -96,7 +130,7 @@ function renderKindTags() {
 /** Horizontal encyclopedia card: 30px icon left, name + level right.
  * The whole card is the clickable outline (border encompasses icon + text). */
 function cardHTML(e) {
-  const imgPath = e.kind === "monster" ? "monsters" : "items";
+  const imgPath = { item: "items", monster: "monsters", resource: "resources", npc: "npcs" }[e.kind] || "items";
   const lvl = e.level === Infinity ? "" : `Lv ${num(e.level)}`;
   const title = lvl ? `${e.name} — ${lvl}` : e.name;
   return (
@@ -155,8 +189,15 @@ els.encySubtypeTags.addEventListener("click", (e) => {
 });
 
 /* ---------- dialogs (same drill-down as the dashboard) ---------- */
+// Detail dialogs never stack: opening one closes the others.
+function closeDetailDialogs(except) {
+  for (const d of [els.itemDialog, els.monsterDialog, els.resourceDialog, els.npcDialog]) {
+    if (d !== except && d.open) d.close();
+  }
+}
+
 function openItemDialog(code) {
-  if (els.monsterDialog.open) els.monsterDialog.close(); // never stack behind it
+  closeDetailDialogs(els.itemDialog);
   const info = itemByCode.get(code);
   els.itemDialogName.textContent = (info && info.name) || prettyCode(code);
   els.itemDialogBody.innerHTML = itemDialogHTML(code);
@@ -164,36 +205,70 @@ function openItemDialog(code) {
 }
 
 function openMonsterDialog(code) {
-  if (els.itemDialog.open) els.itemDialog.close(); // never stack behind it
+  closeDetailDialogs(els.monsterDialog);
   const info = monsterByCode.get(code);
   els.monsterDialogName.textContent = (info && info.name) || prettyCode(code);
   els.monsterDialogBody.innerHTML = monsterDialogHTML(code);
   if (typeof els.monsterDialog.showModal === "function") els.monsterDialog.showModal();
 }
 
+function openResourceDialog(code) {
+  closeDetailDialogs(els.resourceDialog);
+  const info = resourceByCode.get(code);
+  els.resourceDialogName.textContent = (info && info.name) || prettyCode(code);
+  els.resourceDialogBody.innerHTML = resourceDialogHTML(code);
+  if (typeof els.resourceDialog.showModal === "function") els.resourceDialog.showModal();
+}
+
+function openNpcDialog(code) {
+  closeDetailDialogs(els.npcDialog);
+  const info = npcByCode.get(code);
+  els.npcDialogName.textContent = (info && info.name) || prettyCode(code);
+  els.npcDialogBody.innerHTML = npcDialogHTML(code);
+  if (typeof els.npcDialog.showModal === "function") els.npcDialog.showModal();
+}
+
+/** Open the dialog matching an encyclopedia card's kind. */
+function openEntryDialog(kind, code) {
+  if (kind === "monster") return openMonsterDialog(code);
+  if (kind === "resource") return openResourceDialog(code);
+  if (kind === "npc") return openNpcDialog(code);
+  return openItemDialog(code);
+}
+
 els.encyGrid.addEventListener("click", (e) => {
   const card = e.target.closest(".ency-card");
   if (!card || !card.dataset.code) return;
-  if (card.dataset.kind === "monster") openMonsterDialog(card.dataset.code);
-  else openItemDialog(card.dataset.code);
+  openEntryDialog(card.dataset.kind, card.dataset.code);
 });
 els.encyGrid.addEventListener("keydown", (e) => {
   if (e.key !== "Enter" && e.key !== " ") return;
   const card = e.target.closest(".ency-card");
   if (card && card.dataset.code) {
     e.preventDefault();
-    if (card.dataset.kind === "monster") openMonsterDialog(card.dataset.code);
-    else openItemDialog(card.dataset.code);
+    openEntryDialog(card.dataset.kind, card.dataset.code);
   }
 });
 // Drill-down inside the dialogs.
 els.itemDialogBody.addEventListener("click", (e) => {
   const mt = e.target.closest(".monster-tile");
   if (mt && mt.dataset.code) return openMonsterDialog(mt.dataset.code);
+  const rt = e.target.closest(".resource-tile");
+  if (rt && rt.dataset.code) return openResourceDialog(rt.dataset.code);
+  const nt = e.target.closest(".npc-tile");
+  if (nt && nt.dataset.code) return openNpcDialog(nt.dataset.code);
   const tile = e.target.closest(".item-tile");
   if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
 });
 els.monsterDialogBody.addEventListener("click", (e) => {
+  const tile = e.target.closest(".item-tile");
+  if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
+});
+els.resourceDialogBody.addEventListener("click", (e) => {
+  const tile = e.target.closest(".item-tile");
+  if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
+});
+els.npcDialogBody.addEventListener("click", (e) => {
   const tile = e.target.closest(".item-tile");
   if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
 });
@@ -205,9 +280,17 @@ els.monsterDialogClose.addEventListener("click", () => els.monsterDialog.close()
 els.monsterDialog.addEventListener("click", (e) => {
   if (e.target === els.monsterDialog) els.monsterDialog.close();
 });
+els.resourceDialogClose.addEventListener("click", () => els.resourceDialog.close());
+els.resourceDialog.addEventListener("click", (e) => {
+  if (e.target === els.resourceDialog) els.resourceDialog.close();
+});
+els.npcDialogClose.addEventListener("click", () => els.npcDialog.close());
+els.npcDialog.addEventListener("click", (e) => {
+  if (e.target === els.npcDialog) els.npcDialog.close();
+});
 
 /* ---------- boot ---------- */
-Promise.all([loadItemCatalog(), loadMonsterCatalog()])
+Promise.all([loadItemCatalog(), loadMonsterCatalog(), loadResourceCatalog(), loadNpcCatalog()])
   .then(() => {
     entries = buildEntries();
     render();

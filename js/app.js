@@ -18,7 +18,11 @@ import { itemDialogHTML } from "./components/bankSection.js";
 import { itemTileHTML } from "./components/itemTile.js";
 import { loadItemCatalog, itemByCode } from "./items.js";
 import { loadMonsterCatalog, monsterByCode } from "./monsters.js";
+import { loadResourceCatalog, resourceByCode } from "./resources.js";
+import { loadNpcCatalog, npcByCode } from "./npcs.js";
 import { monsterDialogHTML } from "./components/monsterDialog.js";
+import { resourceDialogHTML } from "./components/resourceDialog.js";
+import { npcDialogHTML } from "./components/npcDialog.js";
 import { initPiSection } from "./piSection.js";
 import { initEventsSection } from "./components/eventsSection.js";
 import { initOfferingsSection } from "./components/offeringsSection.js";
@@ -69,6 +73,14 @@ const els = {
   monsterDialogName: document.getElementById("monsterDialogName"),
   monsterDialogBody: document.getElementById("monsterDialogBody"),
   monsterDialogClose: document.getElementById("monsterDialogClose"),
+  resourceDialog: document.getElementById("resourceDialog"),
+  resourceDialogName: document.getElementById("resourceDialogName"),
+  resourceDialogBody: document.getElementById("resourceDialogBody"),
+  resourceDialogClose: document.getElementById("resourceDialogClose"),
+  npcDialog: document.getElementById("npcDialog"),
+  npcDialogName: document.getElementById("npcDialogName"),
+  npcDialogBody: document.getElementById("npcDialogBody"),
+  npcDialogClose: document.getElementById("npcDialogClose"),
 };
 
 /* ---------- banner ---------- */
@@ -511,8 +523,14 @@ els.typeTags.addEventListener("click", (e) => {
 });
 
 /* ---------- item detail dialog ---------- */
+// Detail dialogs never stack: opening one closes the others.
+function closeDetailDialogs(except) {
+  for (const d of [els.itemDialog, els.monsterDialog, els.resourceDialog, els.npcDialog]) {
+    if (d !== except && d.open) d.close();
+  }
+}
 function openItemDialog(code) {
-  if (els.monsterDialog.open) els.monsterDialog.close(); // never stack behind it
+  closeDetailDialogs(els.itemDialog);
   const info = itemByCode.get(code);
   els.itemDialogName.textContent = (info && info.name) || prettyCode(code);
   els.itemDialogBody.innerHTML = itemDialogHTML(code);
@@ -569,13 +587,47 @@ els.monsterDialogClose.addEventListener("click", () => els.monsterDialog.close()
 els.monsterDialog.addEventListener("click", (e) => {
   if (e.target === els.monsterDialog) els.monsterDialog.close();
 });
+// Drop tiles inside the resource dialog drill back into the item dialog.
+els.resourceDialogBody.addEventListener("click", (e) => {
+  const tile = e.target.closest(".item-tile");
+  if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
+});
+els.resourceDialogClose.addEventListener("click", () => els.resourceDialog.close());
+els.resourceDialog.addEventListener("click", (e) => {
+  if (e.target === els.resourceDialog) els.resourceDialog.close();
+});
+// Trade tiles inside the NPC dialog drill back into the item dialog.
+els.npcDialogBody.addEventListener("click", (e) => {
+  const tile = e.target.closest(".item-tile");
+  if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
+});
+els.npcDialogClose.addEventListener("click", () => els.npcDialog.close());
+els.npcDialog.addEventListener("click", (e) => {
+  if (e.target === els.npcDialog) els.npcDialog.close();
+});
 /* ---------- monster detail dialog ---------- */
 function openMonsterDialog(code) {
-  if (els.itemDialog.open) els.itemDialog.close(); // never stack behind it
+  closeDetailDialogs(els.monsterDialog);
   const info = monsterByCode.get(code);
   els.monsterDialogName.textContent = (info && info.name) || prettyCode(code);
   els.monsterDialogBody.innerHTML = monsterDialogHTML(code);
   if (typeof els.monsterDialog.showModal === "function") els.monsterDialog.showModal();
+}
+/* ---------- resource detail dialog ---------- */
+function openResourceDialog(code) {
+  closeDetailDialogs(els.resourceDialog);
+  const info = resourceByCode.get(code);
+  els.resourceDialogName.textContent = (info && info.name) || prettyCode(code);
+  els.resourceDialogBody.innerHTML = resourceDialogHTML(code);
+  if (typeof els.resourceDialog.showModal === "function") els.resourceDialog.showModal();
+}
+/* ---------- NPC detail dialog ---------- */
+function openNpcDialog(code) {
+  closeDetailDialogs(els.npcDialog);
+  const info = npcByCode.get(code);
+  els.npcDialogName.textContent = (info && info.name) || prettyCode(code);
+  els.npcDialogBody.innerHTML = npcDialogHTML(code);
+  if (typeof els.npcDialog.showModal === "function") els.npcDialog.showModal();
 }
 // Monster tiles inside the item dialog (Dropped by) open the monster dialog.
 function wireMonsterTiles(root) {
@@ -593,9 +645,41 @@ function wireMonsterTiles(root) {
   });
 }
 wireMonsterTiles(els.itemDialogBody);
+// Resource tiles inside the item dialog (Gathered from) open the resource dialog.
+function wireResourceTiles(root) {
+  root.addEventListener("click", (e) => {
+    const tile = e.target.closest(".resource-tile");
+    if (tile && tile.dataset.code) openResourceDialog(tile.dataset.code);
+  });
+  root.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const tile = e.target.closest(".resource-tile");
+    if (tile && tile.dataset.code) {
+      e.preventDefault();
+      openResourceDialog(tile.dataset.code);
+    }
+  });
+}
+wireResourceTiles(els.itemDialogBody);
+// NPC tiles inside the item dialog (Sold/Bought by NPCs) open the NPC dialog.
+function wireNpcTiles(root) {
+  root.addEventListener("click", (e) => {
+    const tile = e.target.closest(".npc-tile");
+    if (tile && tile.dataset.code) openNpcDialog(tile.dataset.code);
+  });
+  root.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const tile = e.target.closest(".npc-tile");
+    if (tile && tile.dataset.code) {
+      e.preventDefault();
+      openNpcDialog(tile.dataset.code);
+    }
+  });
+}
+wireNpcTiles(els.itemDialogBody);
 // Tiles inside the dialog (recipe ingredients / used-in items) drill down.
 els.itemDialogBody.addEventListener("click", (e) => {
-  const tile = e.target.closest(".item-tile:not(.monster-tile)");
+  const tile = e.target.closest(".item-tile:not(.monster-tile):not(.resource-tile):not(.npc-tile)");
   if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
 });
 els.token.addEventListener("keydown", (e) => {
@@ -648,6 +732,8 @@ initOfferingsSection();
 // Local catalogs are niceties — the dashboard degrades gracefully without them.
 loadItemCatalog().catch(() => {});
 loadMonsterCatalog().catch(() => {});
+loadResourceCatalog().catch(() => {});
+loadNpcCatalog().catch(() => {});
 loadMapCatalog().catch(() => {});
 const savedToken = readStore(TOKEN_KEY);
 const savedAccount = readStore(ACCOUNT_KEY);

@@ -5,7 +5,13 @@
 // the Refresh button is pressed — never while searching or toggling sides.
 import { API_BASE } from "./config.js";
 import { loadItemCatalog, itemByCode, usedIn } from "./items.js";
+import { loadMonsterCatalog, monsterByCode } from "./monsters.js";
+import { loadResourceCatalog, resourceByCode } from "./resources.js";
+import { loadNpcCatalog, npcByCode } from "./npcs.js";
 import { itemDialogHTML } from "./components/bankSection.js";
+import { monsterDialogHTML } from "./components/monsterDialog.js";
+import { resourceDialogHTML } from "./components/resourceDialog.js";
+import { npcDialogHTML } from "./components/npcDialog.js";
 import { esc, num, prettyCode } from "./utils.js";
 
 const els = {
@@ -20,6 +26,18 @@ const els = {
   itemDialogName: document.getElementById("itemDialogName"),
   itemDialogBody: document.getElementById("itemDialogBody"),
   itemDialogClose: document.getElementById("itemDialogClose"),
+  resourceDialog: document.getElementById("resourceDialog"),
+  resourceDialogName: document.getElementById("resourceDialogName"),
+  resourceDialogBody: document.getElementById("resourceDialogBody"),
+  resourceDialogClose: document.getElementById("resourceDialogClose"),
+  npcDialog: document.getElementById("npcDialog"),
+  npcDialogName: document.getElementById("npcDialogName"),
+  npcDialogBody: document.getElementById("npcDialogBody"),
+  npcDialogClose: document.getElementById("npcDialogClose"),
+  monsterDialog: document.getElementById("monsterDialog"),
+  monsterDialogName: document.getElementById("monsterDialogName"),
+  monsterDialogBody: document.getElementById("monsterDialogBody"),
+  monsterDialogClose: document.getElementById("monsterDialogClose"),
 };
 
 const filter = { q: "", type: "sell" };
@@ -216,29 +234,86 @@ els.geKindTags.addEventListener("click", (e) => {
 });
 els.geRefresh.addEventListener("click", refreshOrderBook);
 
-/* ---------- item dialog ---------- */
+/* ---------- dialogs (never stack) ---------- */
+function closeDetailDialogs(except) {
+  for (const d of [els.itemDialog, els.monsterDialog, els.resourceDialog, els.npcDialog]) {
+    if (d !== except && d.open) d.close();
+  }
+}
+function openMonsterDialog(code) {
+  closeDetailDialogs(els.monsterDialog);
+  const info = monsterByCode.get(code);
+  els.monsterDialogName.textContent = (info && info.name) || prettyCode(code);
+  els.monsterDialogBody.innerHTML = monsterDialogHTML(code);
+  if (typeof els.monsterDialog.showModal === "function") els.monsterDialog.showModal();
+}
 function openItemDialog(code) {
+  closeDetailDialogs(els.itemDialog);
   const info = itemByCode.get(code);
   els.itemDialogName.textContent = (info && info.name) || prettyCode(code);
   els.itemDialogBody.innerHTML = itemDialogHTML(code);
   if (typeof els.itemDialog.showModal === "function") els.itemDialog.showModal();
+}
+function openResourceDialog(code) {
+  closeDetailDialogs(els.resourceDialog);
+  const info = resourceByCode.get(code);
+  els.resourceDialogName.textContent = (info && info.name) || prettyCode(code);
+  els.resourceDialogBody.innerHTML = resourceDialogHTML(code);
+  if (typeof els.resourceDialog.showModal === "function") els.resourceDialog.showModal();
+}
+function openNpcDialog(code) {
+  closeDetailDialogs(els.npcDialog);
+  const info = npcByCode.get(code);
+  els.npcDialogName.textContent = (info && info.name) || prettyCode(code);
+  els.npcDialogBody.innerHTML = npcDialogHTML(code);
+  if (typeof els.npcDialog.showModal === "function") els.npcDialog.showModal();
 }
 els.geList.addEventListener("click", (e) => {
   const tile = e.target.closest(".item-tile");
   if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
 });
 els.itemDialogBody.addEventListener("click", (e) => {
-  const tile = e.target.closest(".item-tile:not(.monster-tile)");
+  const mt = e.target.closest(".monster-tile");
+  if (mt && mt.dataset.code) return openMonsterDialog(mt.dataset.code);
+  const rt = e.target.closest(".resource-tile");
+  if (rt && rt.dataset.code) return openResourceDialog(rt.dataset.code);
+  const nt = e.target.closest(".npc-tile");
+  if (nt && nt.dataset.code) return openNpcDialog(nt.dataset.code);
+  const tile = e.target.closest(".item-tile");
+  if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
+});
+els.monsterDialogBody.addEventListener("click", (e) => {
+  const tile = e.target.closest(".item-tile");
+  if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
+});
+els.monsterDialogClose.addEventListener("click", () => els.monsterDialog.close());
+els.monsterDialog.addEventListener("click", (e) => {
+  if (e.target === els.monsterDialog) els.monsterDialog.close();
+});
+els.resourceDialogBody.addEventListener("click", (e) => {
+  const tile = e.target.closest(".item-tile");
+  if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
+});
+els.npcDialogBody.addEventListener("click", (e) => {
+  const tile = e.target.closest(".item-tile");
   if (tile && tile.dataset.code) openItemDialog(tile.dataset.code);
 });
 els.itemDialogClose.addEventListener("click", () => els.itemDialog.close());
 els.itemDialog.addEventListener("click", (e) => {
   if (e.target === els.itemDialog) els.itemDialog.close();
 });
+els.resourceDialogClose.addEventListener("click", () => els.resourceDialog.close());
+els.resourceDialog.addEventListener("click", (e) => {
+  if (e.target === els.resourceDialog) els.resourceDialog.close();
+});
+els.npcDialogClose.addEventListener("click", () => els.npcDialog.close());
+els.npcDialog.addEventListener("click", (e) => {
+  if (e.target === els.npcDialog) els.npcDialog.close();
+});
 
-/* ---------- boot: load the catalog, then the order book once ---------- */
+/* ---------- boot: load the catalogs, then the order book once ---------- */
 renderKindTags();
-loadItemCatalog()
+Promise.all([loadItemCatalog(), loadMonsterCatalog(), loadResourceCatalog(), loadNpcCatalog()])
   .then(() => refreshOrderBook())
   .catch(() => {
     els.geList.innerHTML = `<div class="log-empty">Could not load the item catalog.</div>`;

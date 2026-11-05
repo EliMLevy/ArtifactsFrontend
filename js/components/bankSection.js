@@ -1,8 +1,12 @@
 // Item detail dialog content (pure HTML; tile clicks are wired in app.js).
 import { itemByCode, usedIn } from "../items.js";
 import { droppedBy } from "../monsters.js";
+import { droppedByResource } from "../resources.js";
+import { itemTrades } from "../npcs.js";
 import { itemTileHTML } from "./itemTile.js";
 import { monsterTileHTML } from "./monsterTile.js";
+import { resourceTileHTML } from "./resourceTile.js";
+import { npcTileHTML } from "./npcTile.js";
 import { esc, num, prettyCode } from "../utils.js";
 
 /** Full detail HTML for the item dialog, from the cached catalog entry. */
@@ -57,6 +61,29 @@ export function itemDialogHTML(code) {
       `</div></div>`
     : "";
 
+  // Reverse lookup: resources that drop this item (click a resource for details).
+  const gatherers = droppedByResource.get(code) || [];
+  const gatheredHtml = gatherers.length
+    ? `<div class="dialog-sec"><h4>Gathered from</h4><div class="dialog-tiles">` +
+      gatherers.map((d) => resourceTileHTML({ code: d.code })).join("") +
+      `</div></div>`
+    : "";
+
+  // Reverse lookup: NPCs that trade this item (click an NPC for details).
+  const trades = itemTrades.get(code) || [];
+  const sellsToYou = trades.filter((t) => t.buy_price != null); // NPC sells the item
+  const buysFromYou = trades.filter((t) => t.sell_price != null); // NPC buys the item
+  const sellsHtml = sellsToYou.length
+    ? `<div class="dialog-sec"><h4>Sold by NPCs</h4><div class="dialog-tiles">` +
+      sellsToYou.map((t) => npcTileHTML({ code: t.npc })).join("") +
+      `</div></div>`
+    : "";
+  const buysHtml = buysFromYou.length
+    ? `<div class="dialog-sec"><h4>Bought by NPCs</h4><div class="dialog-tiles">` +
+      buysFromYou.map((t) => npcTileHTML({ code: t.npc })).join("") +
+      `</div></div>`
+    : "";
+
   // The full catalog object, collapsed until the user asks for it.
   const jsonHtml = info
     ? `<details class="dialog-sec json-sec"><summary>Raw JSON</summary>` +
@@ -76,6 +103,9 @@ export function itemDialogHTML(code) {
     recipeHtml +
     usedHtml +
     droppedHtml +
+    gatheredHtml +
+    sellsHtml +
+    buysHtml +
     jsonHtml
   );
 }
