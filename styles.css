@@ -568,3 +568,8 @@ footer a { color: var(--ink-2); }
 .ge-sub { font-size: 11px; color: var(--ink-2); margin-top: 1px; }
 .cur-icon { width: 11px; height: 11px; vertical-align: -1px; }
 .cur-gold { font-size: 11px; }
+.dialog-trades { display: flex; flex-wrap: wrap; gap: 6px; }
+.trade-row { display: flex; align-items: center; gap: 4px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
+.trade-colon { color: var(--ink-2); font-size: 13px; }
+.trade-price { font-size: 12px; }
+.trade-gold { font-size: 16px; line-height: 1; }

@@ -11,31 +11,36 @@ export function currencyName(currency) {
   return (info && info.name) || prettyCode(currency);
 }
 
-/** Small icon for a trade currency. */
-export function currencyIconHTML(currency) {
-  if (!currency) return "";
-  if (currency === "gold") return `<span class="cur-gold" title="Gold">🪙</span>`;
-  return (
-    `<img class="cur-icon" src="https://artifactsmmo.com/images/items/${encodeURIComponent(currency)}.png" ` +
-    `alt="" loading="lazy" title="${esc(currencyName(currency))}" onerror="this.remove()">`
-  );
-}
-
 /**
- * Trade tile: the item's icon with its price and currency.
+ * Horizontal trade row: traded item icon : price currency icon.
+ * Both item icons are clickable (they open the item dialog); gold has no icon.
  * Title reads e.g. "Cloth — 3 × Wool".
  */
-function tradeTileHTML(code, price, currency) {
-  const info = itemByCode.get(code);
-  const name = (info && info.name) || prettyCode(code);
-  const deal = price != null ? `${num(price)} × ${currencyName(currency)}` : "";
-  const title = deal ? `${name} — ${deal}` : name;
-  return (
-    `<div class="item-tile" data-code="${esc(code)}" title="${esc(title)}" ` +
+function tradeRowHTML(trade) {
+  const info = itemByCode.get(trade.code);
+  const name = (info && info.name) || prettyCode(trade.code);
+  const deal = `${num(trade.price)} × ${currencyName(trade.currency)}`;
+  const title = `${name} — ${deal}`;
+  const itemTile =
+    `<div class="item-tile" data-code="${esc(trade.code)}" title="${esc(title)}" ` +
     `role="button" tabindex="0" aria-label="${esc(title)} — view details">` +
-    `<img src="https://artifactsmmo.com/images/items/${encodeURIComponent(code)}.png" ` +
+    `<img src="https://artifactsmmo.com/images/items/${encodeURIComponent(trade.code)}.png" ` +
     `alt="" loading="lazy" onerror="this.remove()">` +
-    (price != null ? `<div class="item-qty mono">${num(price)} ${currencyIconHTML(currency)}</div>` : "") +
+    `</div>`;
+  const curTile =
+    trade.currency === "gold"
+      ? `<span class="trade-gold" title="Gold">🪙</span>`
+      : `<div class="item-tile" data-code="${esc(trade.currency)}" title="${esc(currencyName(trade.currency))} — view details" ` +
+        `role="button" tabindex="0" aria-label="${esc(currencyName(trade.currency))} — view details">` +
+        `<img src="https://artifactsmmo.com/images/items/${encodeURIComponent(trade.currency)}.png" ` +
+        `alt="" loading="lazy" onerror="this.remove()">` +
+        `</div>`;
+  return (
+    `<div class="trade-row" title="${esc(title)}">` +
+    itemTile +
+    `<span class="trade-colon">:</span>` +
+    `<span class="mono trade-price">${num(trade.price)}</span>` +
+    curTile +
     `</div>`
   );
 }
@@ -50,13 +55,13 @@ export function npcDialogHTML(code) {
   const sells = items.filter((t) => t.buy_price != null); // NPC sells to you
   const buys = items.filter((t) => t.sell_price != null); // NPC buys from you
   const sellsHtml = sells.length
-    ? `<div class="dialog-sec"><h4>Sells</h4><div class="dialog-tiles">` +
-      sells.map((t) => tradeTileHTML(t.code, t.buy_price, t.currency)).join("") +
+    ? `<div class="dialog-sec"><h4>Sells</h4><div class="dialog-trades">` +
+      sells.map((t) => tradeRowHTML({ code: t.code, price: t.buy_price, currency: t.currency })).join("") +
       `</div></div>`
     : "";
   const buysHtml = buys.length
-    ? `<div class="dialog-sec"><h4>Buys</h4><div class="dialog-tiles">` +
-      buys.map((t) => tradeTileHTML(t.code, t.sell_price, t.currency)).join("") +
+    ? `<div class="dialog-sec"><h4>Buys</h4><div class="dialog-trades">` +
+      buys.map((t) => tradeRowHTML({ code: t.code, price: t.sell_price, currency: t.currency })).join("") +
       `</div></div>`
     : "";
   const jsonHtml = n

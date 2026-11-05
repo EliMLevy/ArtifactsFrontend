@@ -2,7 +2,7 @@
 import { itemByCode, usedIn } from "../items.js";
 import { droppedBy } from "../monsters.js";
 import { droppedByResource } from "../resources.js";
-import { itemTrades, npcByCode } from "../npcs.js";
+import { itemTrades, npcByCode, currencyTrades } from "../npcs.js";
 import { itemTileHTML } from "./itemTile.js";
 import { monsterTileHTML } from "./monsterTile.js";
 import { resourceTileHTML } from "./resourceTile.js";
@@ -71,23 +71,43 @@ export function itemDialogHTML(code) {
     : "";
 
   // Reverse lookup: NPCs that trade this item (click an NPC for details).
-  // Tile tooltips show the deal, e.g. "Tailor — sells for 3 × Wool".
+  // Two directions: the item itself is traded, or the item is the currency
+  // the NPC accepts (e.g. wool's dialog lists the Tailor under Bought by NPCs).
   const trades = itemTrades.get(code) || [];
+  const curDeals = currencyTrades.get(code) || [];
   const npcDealTitle = (npcCode, verb, t) => {
     const n = npcByCode.get(npcCode);
     const npcName = (n && n.name) || prettyCode(npcCode);
     return `${npcName} — ${verb} for ${num(t.buy_price ?? t.sell_price)} × ${currencyName(t.currency)}`;
   };
+  const npcCurTitle = (d) => {
+    const n = npcByCode.get(d.npc);
+    const npcName = (n && n.name) || prettyCode(d.npc);
+    const itemName = (itemByCode.get(d.item) && itemByCode.get(d.item).name) || prettyCode(d.item);
+    // d.buy_price: NPC sells `item` for this currency → NPC buys the currency.
+    // d.sell_price: NPC buys `item`, paying this currency → NPC sells the currency.
+    return d.buy_price != null
+      ? `${npcName} — ${num(d.buy_price)} × ${esc(name)} → 1 × ${esc(itemName)}`
+      : `${npcName} — 1 × ${esc(itemName)} → ${num(d.sell_price)} × ${esc(name)}`;
+  };
   const sellsToYou = trades.filter((t) => t.buy_price != null); // NPC sells the item
   const buysFromYou = trades.filter((t) => t.sell_price != null); // NPC buys the item
-  const sellsHtml = sellsToYou.length
+  const sellsHtml = sellsToYou.length || curDeals.some((d) => d.sell_price != null)
     ? `<div class="dialog-sec"><h4>Sold by NPCs</h4><div class="dialog-tiles">` +
       sellsToYou.map((t) => npcTileHTML({ code: t.npc, title: npcDealTitle(t.npc, "sells", t) })).join("") +
+      curDeals
+        .filter((d) => d.sell_price != null)
+        .map((d) => npcTileHTML({ code: d.npc, title: npcCurTitle(d) }))
+        .join("") +
       `</div></div>`
     : "";
-  const buysHtml = buysFromYou.length
+  const buysHtml = buysFromYou.length || curDeals.some((d) => d.buy_price != null)
     ? `<div class="dialog-sec"><h4>Bought by NPCs</h4><div class="dialog-tiles">` +
       buysFromYou.map((t) => npcTileHTML({ code: t.npc, title: npcDealTitle(t.npc, "buys", t) })).join("") +
+      curDeals
+        .filter((d) => d.buy_price != null)
+        .map((d) => npcTileHTML({ code: d.npc, title: npcCurTitle(d) }))
+        .join("") +
       `</div></div>`
     : "";
 
